@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* You can add global styles or custom component styles here if needed */
+body {
+  @apply bg-background-light text-text-light dark:bg-background-dark dark:text-text-dark transition-colors duration-300;
+  font-family: 'Inter', sans-serif; /* Match theme */
+}
+
+/* Example custom component styling that can be applied with Tailwind */
+.btn-primary-custom {
+  @apply bg-primary text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-75 transition-all duration-150;
+}
+
+.card-custom {
+  @apply bg-surface-light dark:bg-surface-dark shadow-lg rounded-xl overflow-hidden;
+}
+
+.card-header-custom {
+  @apply bg-gray-100 dark:bg-gray-700 px-6 py-4 border-b border-gray-200 dark:border-gray-600;
+}
+
+.input-custom {
+    @apply block w-full px-4 py-2 text-text-light dark:text-text-dark bg-surface-light dark:bg-surface-dark border border-secondary-light dark:border-secondary-dark rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm;
+}
+
+/* For scrollbars if desired globally */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    @apply bg-gray-200 dark:bg-gray-700 rounded-full;
+}
+::-webkit-scrollbar-thumb {
+    @apply bg-secondary dark:bg-secondary-dark rounded-full border-2 border-transparent bg-clip-content;
+}
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-opacity-75;
+}
