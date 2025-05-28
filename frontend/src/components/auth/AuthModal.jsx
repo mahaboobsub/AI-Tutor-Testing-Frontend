@@ -1,72 +1,77 @@
-// import React, { useState } from 'react';
-// import { useAuth } from '../../hooks/useAuth';
-// import { useAppState } from '../../contexts/AppStateContext';
-// import LLMSelection from './LLMSelection';
-// import api from '../../services/api';
+// // frontend/src/components/auth/AuthModal.jsx
+// import React, { useState, useEffect } from 'react';
+// import { useAuth } from '../../hooks/useAuth.jsx';
+// import { useAppState } from '../../contexts/AppStateContext.jsx';
+// import LLMSelection from './LLMSelection.jsx';
+// import api from '../../services/api.js'; // For V1, this will use mocked functions
 // import toast from 'react-hot-toast';
-// import { LogIn, UserPlus, X } from 'lucide-react';
+// import { LogIn, UserPlus, X, Terminal, KeyRound, Link2, User as UserIcon } from 'lucide-react';
+// import Button from '../core/Button.jsx';
+// import { motion, AnimatePresence } from 'framer-motion'; // Assuming you're using AnimatePresence in App.jsx for this modal
 
 // function AuthModal({ isOpen, onClose }) {
-//     const { login, signup } = useAuth();
-//     const { selectedLLM, switchLLM: setGlobalLLM } = useAppState(); // Using context for global LLM
+//     const { login, signup, devLogin, isTestingMode, DEV_MODE_ALLOW_DEV_LOGIN } = useAuth(); 
+//     const { selectedLLM: globalSelectedLLM, switchLLM: setGlobalLLM } = useAppState();
     
 //     const [isLoginView, setIsLoginView] = useState(true);
-//     const [username, setUsername] = useState('');
-//     const [password, setPassword] = useState('');
-//     const [localSelectedLLM, setLocalSelectedLLM] = useState(selectedLLM || 'ollama');
-//     const [geminiApiKey, setGeminiApiKey] = useState(''); // For initial setup
+//     const [username, setUsername] = useState(isTestingMode || DEV_MODE_ALLOW_DEV_LOGIN ? 'DevUser' : '');
+//     const [password, setPassword] = useState(isTestingMode || DEV_MODE_ALLOW_DEV_LOGIN ? 'devpass' : '');
+//     const [localSelectedLLM, setLocalSelectedLLM] = useState(globalSelectedLLM || 'ollama');
+//     const [geminiApiKey, setGeminiApiKey] = useState('');
+//     const [ollamaApiUrl, setOllamaApiUrl] = useState('');
     
 //     const [error, setError] = useState('');
 //     const [loading, setLoading] = useState(false);
 
-//     const handleLlmChange = (llm) => {
-//         setLocalSelectedLLM(llm);
-//     };
+//     useEffect(() => {
+//         if (isOpen) {
+//             setUsername(isTestingMode || DEV_MODE_ALLOW_DEV_LOGIN ? 'DevUser' : '');
+//             setPassword(isTestingMode || DEV_MODE_ALLOW_DEV_LOGIN ? 'devpass' : '');
+//             setLocalSelectedLLM(globalSelectedLLM || 'ollama');
+//             setGeminiApiKey('');
+//             setOllamaApiUrl('');
+//             setError('');
+//         }
+//     }, [isOpen, isLoginView, isTestingMode, DEV_MODE_ALLOW_DEV_LOGIN, globalSelectedLLM]);
+
+//     const handleLlmChange = (llm) => setLocalSelectedLLM(llm);
 
 //     const handleSubmit = async (e) => {
 //         e.preventDefault();
+//         if (!username.trim() || !password.trim()) {
+//             setError("Username and password are required.");
+//             toast.error("Username and password are required.");
+//             return;
+//         }
 //         setError('');
 //         setLoading(true);
-//         toast.loading(isLoginView ? 'Logging in...' : 'Signing up...');
+//         const toastId = toast.loading(isLoginView ? 'Logging in...' : 'Signing up...');
 
 //         try {
 //             let response;
-//             if (isLoginView) {
-//                 response = await login({ username, password });
-//                 // After login, fetch user's preferred LLM from backend or use local default
-//                 // For now, we assume login doesn't change the global LLM state directly here.
-//                 // The TopNav LLM switcher will handle explicit changes.
-//             } else { // Signup
-//                 // For signup, we include LLM preference and potentially API key
-//                 const signupData = {
-//                     username,
-//                     password,
-//                     // Include LLM preference if your backend stores it on signup
-//                     // llmProvider: localSelectedLLM, 
-//                 };
-//                 // The API key for Gemini should ideally be set via a separate user config endpoint AFTER login for security.
-//                 // Only if backend handles it very securely on signup path.
-//                 response = await signup(signupData);
-//                 setGlobalLLM(localSelectedLLM); // Set global LLM on successful signup
+//             const apiPayload = { username, password };
 
-//                 // If Gemini was selected and API key provided, try to update user config
+//             if (isLoginView) {
+//                 response = await login(apiPayload); // Calls mock login from AuthContext or api.js
+//             } else { 
+//                 response = await signup(apiPayload); // Calls mock signup
+//                 setGlobalLLM(localSelectedLLM); 
+                
 //                 if (localSelectedLLM === 'gemini' && geminiApiKey.trim()) {
-//                     // This assumes successful signup returns a token that's now set in api.js interceptor
-//                     // You might need to wait for the token to be fully set in AuthContext
-//                     try {
-//                         await api.updateUserLLMConfig({ llmProvider: 'gemini', apiKey: geminiApiKey.trim() });
-//                         toast.success('Gemini API key configured (if provided and valid).');
-//                     } catch (configError) {
-//                         toast.error(`Signed up, but failed to configure Gemini API key: ${configError.message}`);
-//                     }
+//                     await api.updateUserLLMConfig({ llmProvider: 'gemini', apiKey: geminiApiKey.trim() }); // Mocked
+//                     toast.success('Gemini API key preference noted (mocked).');
+//                 }
+//                 if (localSelectedLLM === 'ollama' && ollamaApiUrl.trim()) {
+//                      await api.updateUserLLMConfig({ llmProvider: 'ollama', ollamaUrl: ollamaApiUrl.trim() }); // Mocked
+//                     toast.success('Ollama URL preference noted (mocked).');
 //                 }
 //             }
-//             toast.dismiss();
-//             toast.success(isLoginView ? 'Logged in successfully!' : 'Signed up successfully!');
-//             onClose(response); // Close modal and signal App.js to update state
+//             toast.dismiss(toastId);
+//             toast.success(isLoginView ? 'Mock Login Successful!' : 'Mock Signup Successful!');
+//             onClose(response); 
 //         } catch (err) {
-//             toast.dismiss();
-//             const errorMessage = err.response?.data?.message || err.message || `Failed to ${isLoginView ? 'login' : 'sign up'}`;
+//             toast.dismiss(toastId);
+//             const errorMessage = err.message || `Failed: ${isLoginView ? 'login' : 'signup'} (mock error)`;
 //             setError(errorMessage);
 //             toast.error(errorMessage);
 //         } finally {
@@ -74,231 +79,334 @@
 //         }
 //     };
 
-//     if (!isOpen) return null;
+//     const handleDevLogin = () => {
+//         if (devLogin) { // devLogin comes from AuthContext
+//             const devData = devLogin(); 
+//             if (devData) {
+//                 toast.success("Dev Quick Login Successful!");
+//                 onClose(devData);
+//             }
+//         } else {
+//             toast.error("Dev login not available.");
+//         }
+//     };
+
+//     if (!isOpen && !isTestingMode) return null; // If not testing mode and not open, render nothing
+//     if (isTestingMode && !isOpen && token && user) return null; // If testing mode, already "logged in" and modal not forced open
+
+//     // Define input classes here for consistency
+//     const inputWrapperClass = "relative";
+//     const inputIconClass = "absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted-light dark:text-text-muted-dark pointer-events-none";
+//     const inputFieldClass = "input-field pl-10 py-2.5 text-sm"; // Uses .input-field from index.css
 
 //     return (
-//         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
-//             <div className="bg-surface-light dark:bg-surface-dark p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all">
-//                 <div className="flex justify-between items-center mb-6">
-//                     <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-//                         {isLoginView ? 'Welcome Back!' : 'Join Us'}
-//                     </h2>
-//                     <button onClick={onClose} className="text-text-muted-light dark:text-text-muted-dark hover:text-red-500 transition-colors">
-//                         <X size={24} />
-//                     </button>
+//         // No AnimatePresence here, App.jsx handles it for the modal
+//         <motion.div
+//             key="auth-modal-content" // For AnimatePresence in App.jsx
+//             initial={{ opacity: 0, scale: 0.95, y: -20 }}
+//             animate={{ opacity: 1, scale: 1, y: 0 }}
+//             exit={{ opacity: 0, scale: 0.95, y: 10 }}
+//             transition={{ type: "spring", stiffness: 400, damping: 25 }}
+//             className="card-base p-6 sm:p-8 w-full max-w-md glass-effect" // Added glass-effect
+//             // Removed backdrop div, assuming Modal component in App.jsx handles it
+//         >
+//             <div className="flex justify-between items-center mb-6">
+//                 <h2 className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark">
+//                     {isLoginView ? 'Welcome Back' : 'Create Your Account'}
+//                 </h2>
+//                 <IconButton 
+//                     icon={X} 
+//                     onClick={() => onClose(null)} // Pass null to indicate manual close
+//                     variant="ghost" 
+//                     size="sm" 
+//                     title="Close" 
+//                     className="text-text-muted-light dark:text-text-muted-dark hover:text-red-500 dark:hover:text-red-400"
+//                 />
+//             </div>
+
+//             {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 rounded-md text-sm animate-fadeIn">{error}</div>}
+
+//             <form onSubmit={handleSubmit} className="space-y-5">
+//                 <div className={inputWrapperClass}>
+//                     <UserIcon className={inputIconClass} />
+//                     <input type="text" id="username" className={inputFieldClass} placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={loading}/>
+//                 </div>
+//                 <div className={inputWrapperClass}>
+//                     <KeyRound className={inputIconClass} />
+//                     <input type="password" id="password" className={inputFieldClass} placeholder="Password (min. 6 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength="6" disabled={loading}/>
 //                 </div>
 
-//                 {error && <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded-md text-sm">{error}</div>}
-
-//                 <form onSubmit={handleSubmit} className="space-y-6">
-//                     <div>
-//                         <label htmlFor="username" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Username</label>
-//                         <input
-//                             type="text"
-//                             id="username"
-//                             className="input-custom"
-//                             value={username}
-//                             onChange={(e) => setUsername(e.target.value)}
-//                             required
-//                             disabled={loading}
-//                         />
-//                     </div>
-//                     <div>
-//                         <label htmlFor="password" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Password</label>
-//                         <input
-//                             type="password"
-//                             id="password"
-//                             className="input-custom"
-//                             value={password}
-//                             onChange={(e) => setPassword(e.target.value)}
-//                             required
-//                             minLength="6"
-//                             disabled={loading}
-//                         />
-//                     </div>
-
-//                     {!isLoginView && (
-//                         <>
-//                             <LLMSelection selectedLLM={localSelectedLLM} onLlmChange={handleLlmChange} />
-//                             {localSelectedLLM === 'gemini' && (
-//                                 <div>
-//                                     <label htmlFor="geminiApiKey" className="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-//                                         Gemini API Key (Optional - for cloud features)
-//                                     </label>
-//                                     <input
-//                                         type="password" // Keep it as password type for some obfuscation
-//                                         id="geminiApiKey"
-//                                         className="input-custom"
-//                                         placeholder="Enter your Gemini API Key"
-//                                         value={geminiApiKey}
-//                                         onChange={(e) => setGeminiApiKey(e.target.value)}
-//                                         disabled={loading}
-//                                     />
-//                                     <p className="text-xs text-text-muted-light dark:text-text-muted-dark mt-1">
-//                                         Your API key will be stored securely by the backend.
-//                                     </p>
+//                 {!isLoginView && (
+//                     <div className="space-y-4 pt-2 animate-fadeIn">
+//                         <LLMSelection selectedLLM={localSelectedLLM} onLlmChange={handleLlmChange} />
+//                         {localSelectedLLM === 'gemini' && (
+//                             <div className="mt-3 space-y-1">
+//                                 <label htmlFor="geminiApiKeyModal" className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Gemini API Key (Optional)</label>
+//                                 <div className={inputWrapperClass}>
+//                                     <KeyRound className={inputIconClass} />
+//                                     <input type="password" id="geminiApiKeyModal" className={inputFieldClass} placeholder="Enter your Gemini API Key" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} disabled={loading}/>
 //                                 </div>
-//                             )}
-//                         </>
-//                     )}
-
-//                     <button
-//                         type="submit"
-//                         className="w-full btn-primary-custom flex items-center justify-center gap-2"
-//                         disabled={loading}
-//                     >
-//                         {loading ? (
-//                             <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></span>
-//                         ) : (
-//                             isLoginView ? <LogIn size={20}/> : <UserPlus size={20}/>
+//                             </div>
 //                         )}
-//                         {isLoginView ? 'Login' : 'Sign Up'}
-//                     </button>
-//                 </form>
+//                         {localSelectedLLM === 'ollama' && (
+//                             <div className="mt-3 space-y-1">
+//                                 <label htmlFor="ollamaApiUrlModal" className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Ollama API URL (Optional)</label>
+//                                  <div className={inputWrapperClass}>
+//                                     <Link2 className={inputIconClass} />
+//                                     <input type="text" id="ollamaApiUrlModal" className={inputFieldClass} placeholder="Default: http://localhost:11434" value={ollamaApiUrl} onChange={(e) => setOllamaApiUrl(e.target.value)} disabled={loading}/>
+//                                 </div>
+//                             </div>
+//                         )}
+//                     </div>
+//                 )}
 
-//                 <p className="mt-6 text-center text-sm">
-//                     <button
-//                         onClick={() => { setIsLoginView(!isLoginView); setError(''); }}
-//                         className="font-medium text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary transition-colors"
-//                         disabled={loading}
+//                 <Button type="submit" fullWidth isLoading={loading} leftIcon={isLoginView ? <LogIn size={18}/> : <UserPlus size={18}/>} className="py-2.5 !text-base"> {/* Made button text larger */}
+//                     {isLoginView ? 'Login' : 'Sign Up'}
+//                 </Button>
+//             </form>
+
+//             <p className="mt-6 text-center text-sm">
+//                 <button 
+//                     onClick={() => { setIsLoginView(!isLoginView); setError(''); }}
+//                     className="font-medium text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary-darker transition-colors"
+//                     disabled={loading}
+//                 >
+//                     {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Login"}
+//                 </button>
+//             </p>
+
+//             {/* DEV_MODE_ALLOW_DEV_LOGIN is from AuthContext */}
+//             {DEV_MODE_ALLOW_DEV_LOGIN && ( 
+//                 <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+//                     <Button
+//                         type="button" onClick={handleDevLogin} fullWidth 
+//                         className="bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700 !text-white dark:!text-gray-900 font-semibold py-2.5 !text-base" // Overriding some default Button styles
+//                         leftIcon={<Terminal size={18} />}
 //                     >
-//                         {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Login"}
-//                     </button>
-//                 </p>
-//             </div>
-//         </div>
+//                         Dev Quick Login
+//                     </Button>
+//                 </div>
+//             )}
+//         </motion.div>
 //     );
 // }
 // export default AuthModal;
-import React, { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { useAppState } from '../../contexts/AppStateContext';
-import LLMSelection from './LLMSelection';
-import api from '../../services/api'; // For real signup/login
+
+
+
+
+
+
+
+// frontend/src/components/auth/AuthModal.jsx
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../hooks/useAuth.jsx';
+import { useAppState } from '../../contexts/AppStateContext.jsx';
+import LLMSelection from './LLMSelection.jsx';
+import api from '../../services/api.js'; 
 import toast from 'react-hot-toast';
-import { LogIn, UserPlus, X, Terminal } from 'lucide-react'; // Added Terminal for dev
+import { LogIn, UserPlus, X, Terminal, KeyRound, Link2, User as UserIcon, AlertCircle } from 'lucide-react';
+import Button from '../core/Button.jsx';
+import IconButton from '../core/IconButton.jsx'; // <<--- ***** ADD THIS IMPORT *****
+import { motion } from 'framer-motion';
 
 function AuthModal({ isOpen, onClose }) {
-    const { login, signup, devLogin, DEV_MODE_ALLOW_DEV_LOGIN } = useAuth(); // Get devLogin and flag
-    const { selectedLLM, switchLLM: setGlobalLLM } = useAppState();
+    const { 
+        login, signup, devLogin, 
+        DEV_MODE_ALLOW_DEV_LOGIN, // Flag from AuthContext
+        MOCK_DEV_USERNAME, MOCK_DEV_PASSWORD // Default credentials from AuthContext
+    } = useAuth(); 
+    const { selectedLLM: globalSelectedLLM, switchLLM: setGlobalLLM } = useAppState();
     
     const [isLoginView, setIsLoginView] = useState(true);
-    const [username, setUsername] = useState(DEV_MODE_ALLOW_DEV_LOGIN ? 'DevUser' : ''); // Pre-fill for dev
-    const [password, setPassword] = useState(DEV_MODE_ALLOW_DEV_LOGIN ? 'devpass' : ''); // Pre-fill for dev
-    const [localSelectedLLM, setLocalSelectedLLM] = useState(selectedLLM || 'ollama');
+    // Pre-fill if dev mode allows and credentials are provided by AuthContext
+    const [username, setUsername] = useState(DEV_MODE_ALLOW_DEV_LOGIN ? (MOCK_DEV_USERNAME || '') : '');
+    const [password, setPassword] = useState(DEV_MODE_ALLOW_DEV_LOGIN ? (MOCK_DEV_PASSWORD || '') : '');
+    const [localSelectedLLM, setLocalSelectedLLM] = useState(globalSelectedLLM || 'ollama');
     const [geminiApiKey, setGeminiApiKey] = useState('');
+    const [ollamaApiUrl, setOllamaApiUrl] = useState('');
     
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [devLoginLoading, setDevLoginLoading] = useState(false); 
+
+    useEffect(() => {
+        if (isOpen) {
+            setError(''); 
+            if (isLoginView && DEV_MODE_ALLOW_DEV_LOGIN) {
+                setUsername(MOCK_DEV_USERNAME || '');
+                setPassword(MOCK_DEV_PASSWORD || '');
+            } else if (!isLoginView) { 
+                setUsername('');
+                setPassword('');
+            }
+            setLocalSelectedLLM(globalSelectedLLM || 'ollama');
+            setGeminiApiKey('');
+            setOllamaApiUrl('');
+        }
+    }, [isOpen, isLoginView, DEV_MODE_ALLOW_DEV_LOGIN, MOCK_DEV_USERNAME, MOCK_DEV_PASSWORD, globalSelectedLLM]);
 
     const handleLlmChange = (llm) => setLocalSelectedLLM(llm);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        setLoading(true);
-        const loadingToastId = toast.loading(isLoginView ? 'Logging in...' : 'Signing up...');
-
+        if (!username.trim() || !password.trim()) {
+            setError("Username and password are required.");
+            toast.error("Username and password are required.");
+            return;
+        }
+        setError(''); setLoading(true);
+        const toastId = toast.loading(isLoginView ? 'Logging in...' : 'Signing up...');
         try {
             let response;
+            const apiPayload = { username, password };
             if (isLoginView) {
-                response = await login({ username, password });
-            } else {
-                const signupData = { username, password /*, llmProvider: localSelectedLLM (if backend handles) */ };
-                response = await signup(signupData);
+                response = await login(apiPayload);
+            } else { 
+                response = await signup(apiPayload);
                 setGlobalLLM(localSelectedLLM);
                 if (localSelectedLLM === 'gemini' && geminiApiKey.trim()) {
-                    try {
-                        await api.updateUserLLMConfig({ llmProvider: 'gemini', apiKey: geminiApiKey.trim() });
-                        toast.success('Gemini API key configured.');
-                    } catch (configError) {
-                        toast.error(`Signed up, but failed to config Gemini key: ${configError.message}`);
-                    }
+                    await api.updateUserLLMConfig({ llmProvider: 'gemini', apiKey: geminiApiKey.trim() });
+                    toast.success('Gemini API key preference noted (mocked).');
+                }
+                if (localSelectedLLM === 'ollama' && ollamaApiUrl.trim()) {
+                     await api.updateUserLLMConfig({ llmProvider: 'ollama', ollamaUrl: ollamaApiUrl.trim() });
+                    toast.success('Ollama URL preference noted (mocked).');
                 }
             }
-            toast.dismiss(loadingToastId);
-            toast.success(isLoginView ? 'Logged in successfully!' : 'Signed up successfully!');
+            toast.dismiss(toastId);
+            toast.success(isLoginView ? 'Login Successful!' : 'Signup Successful!');
             onClose(response); 
         } catch (err) {
-            toast.dismiss(loadingToastId);
+            toast.dismiss(toastId);
             const errorMessage = err.response?.data?.message || err.message || `Failed: ${isLoginView ? 'login' : 'signup'}`;
             setError(errorMessage);
             toast.error(errorMessage);
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     };
 
-    const handleDevLogin = () => {
+    const handleDevLogin = async () => {
         if (devLogin) {
-            const devData = devLogin(); // This sets token/user in AuthContext
-            if (devData) {
-                toast.success("Logged in as Dev User!");
-                onClose(devData); // Pass devData which includes a mock sessionId
+            setDevLoginLoading(true); setError('');
+            const toastId = toast.loading("Attempting Dev Quick Login...");
+            try {
+                const devData = await devLogin(); 
+                if (devData && devData.token) {
+                    toast.dismiss(toastId);
+                    toast.success("Dev Quick Login Successful!");
+                    onClose(devData);
+                } else {
+                    throw new Error("Dev login conditions not met or mock API failed.");
+                }
+            } catch(err) {
+                toast.dismiss(toastId);
+                const errorMessage = err.message || "Dev Quick Login encountered an error.";
+                setError(errorMessage);
+                toast.error(errorMessage);
+            } finally {
+                setDevLoginLoading(false);
             }
+        } else {
+            toast.error("Dev login feature not available in current AuthContext setup.");
         }
     };
 
     if (!isOpen) return null;
 
+    const inputWrapperClass = "relative";
+    const inputIconClass = "absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-muted-light dark:text-text-muted-dark pointer-events-none";
+    const inputFieldStyledClass = "input-field pl-10 py-2.5 text-sm";
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fadeIn">
-            <div className="bg-surface-light dark:bg-surface-dark p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-md">
-                {/* ... (Modal Header as before) ... */}
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <motion.div 
+                key="auth-modal-content"
+                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className="card-base p-6 sm:p-8 w-full max-w-md glass-effect"
+            >
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">
-                        {isLoginView ? 'Welcome Back!' : 'Join Us'}
+                    <h2 className="text-xl sm:text-2xl font-bold text-text-light dark:text-text-dark">
+                        {isLoginView ? 'Welcome Back' : 'Create Your Account'}
                     </h2>
-                    <button onClick={() => onClose(null)} className="text-text-muted-light dark:text-text-muted-dark hover:text-red-500">
-                        <X size={24} />
-                    </button>
+                    {/* This is where IconButton is used */}
+                    <IconButton 
+                        icon={X} 
+                        onClick={() => onClose(null)} 
+                        variant="ghost" 
+                        size="sm" 
+                        title="Close" 
+                        className="text-text-muted-light dark:text-text-muted-dark hover:text-red-500 dark:hover:text-red-400"
+                    />
                 </div>
 
-                {error && <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded-md text-sm">{error}</div>}
+                {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 rounded-md text-sm animate-fadeIn flex items-center gap-2"><AlertCircle size={16}/>{error}</div>}
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* ... (Username and Password inputs as before, possibly pre-filled if DEV_MODE_ALLOW_DEV_LOGIN) ... */}
-                    <div>
-                        <label /* ... */ >Username</label>
-                        <input value={username} onChange={(e) => setUsername(e.target.value)} /* ... */ />
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className={inputWrapperClass}>
+                        <UserIcon className={inputIconClass} />
+                        <input type="text" id="username" className={inputFieldStyledClass} placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} required disabled={loading || devLoginLoading}/>
                     </div>
-                    <div>
-                        <label /* ... */ >Password</label>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /* ... */ />
+                    <div className={inputWrapperClass}>
+                        <KeyRound className={inputIconClass} />
+                        <input type="password" id="password" className={inputFieldStyledClass} placeholder="Password (min. 6 characters)" value={password} onChange={(e) => setPassword(e.target.value)} required minLength="6" disabled={loading || devLoginLoading}/>
                     </div>
 
-                    {!isLoginView && ( /* LLM Selection and Gemini Key for Signup View */
-                        <>
-                            <LLMSelection selectedLLM={localSelectedLLM} onLlmChange={handleLlmChange} />
-                            {/* ... (Gemini API Key input as before) ... */}
-                        </>
+                    {!isLoginView && (
+                        <div className="space-y-4 pt-2 animate-fadeIn">
+                            <LLMSelection selectedLLM={localSelectedLLM} onLlmChange={handleLlmChange} disabled={loading || devLoginLoading}/>
+                            {localSelectedLLM === 'gemini' && (
+                                <div className="mt-3 space-y-1">
+                                    <label htmlFor="geminiApiKeyModal" className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Gemini API Key (Optional)</label>
+                                    <div className={inputWrapperClass}>
+                                        <KeyRound className={inputIconClass} />
+                                        <input type="password" id="geminiApiKeyModal" className={inputFieldStyledClass} placeholder="Enter your Gemini API Key" value={geminiApiKey} onChange={(e) => setGeminiApiKey(e.target.value)} disabled={loading || devLoginLoading}/>
+                                    </div>
+                                </div>
+                            )}
+                            {localSelectedLLM === 'ollama' && (
+                                <div className="mt-3 space-y-1">
+                                    <label htmlFor="ollamaApiUrlModal" className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark">Ollama API URL (Optional)</label>
+                                     <div className={inputWrapperClass}>
+                                        <Link2 className={inputIconClass} />
+                                        <input type="text" id="ollamaApiUrlModal" className={inputFieldStyledClass} placeholder="Default: http://localhost:11434" value={ollamaApiUrl} onChange={(e) => setOllamaApiUrl(e.target.value)} disabled={loading || devLoginLoading}/>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     )}
 
-                    <button type="submit" /* ... */ >
-                        {/* ... (Loading spinner or Icon + Text) ... */}
+                    <Button type="submit" fullWidth isLoading={loading} disabled={devLoginLoading} leftIcon={isLoginView ? <LogIn size={18}/> : <UserPlus size={18}/>} className="py-2.5 !text-base">
                         {isLoginView ? 'Login' : 'Sign Up'}
-                    </button>
+                    </Button>
                 </form>
 
                 <p className="mt-6 text-center text-sm">
-                    <button onClick={() => setIsLoginView(!isLoginView)} /* ... */ >
+                    <button 
+                        onClick={() => { setIsLoginView(!isLoginView); setError(''); }}
+                        className="font-medium text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary-darker transition-colors"
+                        disabled={loading || devLoginLoading}
+                    >
                         {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Login"}
                     </button>
                 </p>
 
-                {/* Dev Login Button */}
                 {DEV_MODE_ALLOW_DEV_LOGIN && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <button
-                            type="button"
-                            onClick={handleDevLogin}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-700 hover:bg-yellow-200 dark:hover:bg-yellow-600 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    <div className="mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+                        <Button
+                            type="button" onClick={handleDevLogin} fullWidth 
+                            className="bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700 !text-white dark:!text-gray-900 font-semibold py-2.5 !text-base"
+                            leftIcon={<Terminal size={18} />}
+                            isLoading={devLoginLoading} 
+                            disabled={loading} 
                         >
-                            <Terminal size={18} /> Dev Quick Login
-                        </button>
+                            Dev Quick Login
+                        </Button>
                     </div>
                 )}
-            </div>
+            </motion.div>
         </div>
     );
 }

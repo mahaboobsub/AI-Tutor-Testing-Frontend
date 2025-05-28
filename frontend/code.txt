@@ -4,6 +4,7 @@
 #REACT_APP_API_BASE_URL=http://localhost:5001/api
 # OR for Vite:
 VITE_API_BASE_URL=http://localhost:5001/api
+
 ```
 
 `code.txt`
@@ -1034,20 +1035,325 @@ export default {
 
 // export default App;
 
+// import React, { useState, useEffect, useCallback } from 'react';
+// import { useAuth } from './hooks/useAuth';
+// import { useAppState } from './contexts/AppStateContext';
+// import AuthModal from './components/auth/AuthModal';
+// import TopNav from './components/layout/TopNav';
+// import LeftPanel from './components/layout/LeftPanel';
+// import CenterPanel from './components/layout/CenterPanel';
+// import RightPanel from './components/layout/RightPanel';
+// import api from './services/api';
+// import toast from 'react-hot-toast';
+// import { motion, AnimatePresence } from 'framer-motion';
+
+// // Set this consistently across AuthContext, AppStateContext, and App.jsx for dev mode
+// const DEV_MODE_BYPASS_AUTH = true; 
+
+// function App() {
+//     const { 
+//         token, 
+//         user, 
+//         loading: authLoadingFromContext, 
+//         logout, 
+//         setUser: setAuthUser, 
+//         // setToken: setAuthToken // We usually let AuthContext manage token setting via login/logout
+//     } = useAuth();
+
+//     const { 
+//         theme, 
+//         isLeftPanelOpen, // AppStateContext manages this state
+//         isRightPanelOpen, // AppStateContext manages this state
+//         currentSessionId, 
+//         setSessionId: setGlobalSessionId 
+//     } = useAppState();
+    
+//     // Local loading state for App component's own async operations or initial setup
+//     const [appInitializing, setAppInitializing] = useState(true);
+//     const [showAuthModal, setShowAuthModal] = useState(false); // Controls AuthModal visibility
+//     const [messages, setMessages] = useState([]);
+//     const [chatStatus, setChatStatus] = useState('Ready. Send a message to start!');
+//     const [orchestratorStatus, setOrchestratorStatus] = useState({ status: "loading", message: "Connecting..." });
+
+//     // Initialize theme class on <html> and <body>
+//     useEffect(() => {
+//         const rootHtmlElement = document.documentElement;
+//         const bodyElement = document.body; // If you need body-specific classes too
+//         if (theme === 'dark') {
+//             rootHtmlElement.classList.add('dark');
+//             // bodyElement.classList.add('dark-theme-body'); // Example
+//         } else {
+//             rootHtmlElement.classList.remove('dark');
+//             // bodyElement.classList.remove('dark-theme-body');
+//         }
+//         // For more complex body theming, you might set a data-theme attribute
+//         // bodyElement.setAttribute('data-theme', theme);
+//     }, [theme]);
+
+
+//     // Auth and Session Initialization Logic
+//     useEffect(() => {
+//         if (DEV_MODE_BYPASS_AUTH) {
+//             // In dev bypass mode, AuthContext and AppStateContext should already provide
+//             // devUser, devToken, and devSessionId.
+//             // App.jsx just needs to ensure it's not stuck in an initializing state.
+//             console.log("DEV_MODE (App.jsx): Bypassing auth, user/token should be set by AuthContext.");
+//             if (user && token && !currentSessionId) { // If dev user/token set, but no dev session
+//                  setGlobalSessionId('dev-session-appjsx-ensure-123'); // Ensure a session ID
+//             }
+//             setAppInitializing(false); // Bypass complete
+//             setShowAuthModal(false);   // Don't show auth modal
+//             return;
+//         }
+
+//         // Real auth flow (if DEV_MODE_BYPASS_AUTH is false)
+//         if (authLoadingFromContext) {
+//             setAppInitializing(true); // Still initializing if AuthContext is checking token
+//             return;
+//         }
+
+//         if (!token) { // No token means user is not logged in (AuthContext confirmed this)
+//             setShowAuthModal(true);   // Prompt for login/signup
+//             setAppInitializing(false);
+//         } else { // Token exists, user is considered logged in
+//             setShowAuthModal(false); // Ensure modal is closed
+//             if (!currentSessionId) { // Token exists, but no session ID found in AppStateContext
+//                 api.startNewSession().then(data => {
+//                     setGlobalSessionId(data.sessionId);
+//                 }).catch(err => {
+//                     toast.error("Session initialization failed. Please try logging in again.");
+//                     console.error("Session init error after token check:", err);
+//                     // Consider if logout is needed here if session is critical
+//                     // logout(); 
+//                 });
+//             }
+//             setAppInitializing(false); // Done initializing for authenticated user
+//         }
+//     }, [token, user, authLoadingFromContext, currentSessionId, setGlobalSessionId, logout]);
+
+
+//     // Fetch orchestrator status (runs regardless of auth state for general app health)
+//     useEffect(() => {
+//         const fetchStatus = async () => {
+//             const statusData = await api.getOrchestratorStatus();
+//             setOrchestratorStatus(statusData);
+//         };
+//         fetchStatus();
+//         const intervalId = setInterval(fetchStatus, 20000); // Check every 20 seconds
+//         return () => clearInterval(intervalId);
+//     }, []);
+
+//     // Fetch chat history when session ID or token changes (and both are present)
+//     const fetchChatHistory = useCallback(async (sid) => {
+//         if (!sid || !token) { // Need both session and token
+//             setMessages([]);
+//             setChatStatus(token ? "Start or select a chat." : "Please login to see chat history.");
+//             return;
+//         }
+//         setChatStatus("Loading history...");
+//         try {
+//             const historyData = await api.getChatHistory(sid); // Token auto-included by API service
+//             const formattedMessages = (Array.isArray(historyData) ? historyData : []).map(msg => ({
+//                 id: msg.id || msg._id || String(Math.random() + Date.now()), // Ensure unique key
+//                 sender: msg.role === 'model' ? 'bot' : 'user',
+//                 text: msg.parts && msg.parts.length > 0 ? msg.parts[0].text : (msg.text || ''),
+//                 thinking: msg.thinking,
+//                 references: msg.references || [],
+//                 timestamp: msg.timestamp,
+//                 source_pipeline: msg.source_pipeline
+//             }));
+//             setMessages(formattedMessages);
+//             setChatStatus(formattedMessages.length > 0 ? "History loaded." : "Chat is empty. Send a message!");
+//         } catch (error) {
+//             toast.error(`Failed to load chat history: ${error.message}`);
+//             setChatStatus("Error loading history.");
+//             console.error("Failed to load chat history:", error);
+//         }
+//     }, [token]); // Depends on token to make the API call
+
+//     useEffect(() => {
+//         // This effect runs when currentSessionId or token changes.
+//         // It calls fetchChatHistory if both are present.
+//         if (currentSessionId && token) {
+//             fetchChatHistory(currentSessionId);
+//         } else if (!token) { // If token becomes null (e.g., after logout)
+//             setMessages([]); // Clear messages
+//             setChatStatus("Please login.");
+//         }
+//         // If token exists but currentSessionId is null, the auth useEffect should handle starting a new session
+//     }, [currentSessionId, token, fetchChatHistory]);
+
+
+//     const handleAuthSuccess = (authData) => { // Called by AuthModal after successful login/signup/devLogin
+//         setShowAuthModal(false);
+//         // AuthContext's login/signup/devLogin methods should have set the token and user in AuthContext.
+//         // App.jsx uses the `user` and `token` from `useAuth()`.
+//         // The main task here is to ensure the session ID from authData is set globally.
+//         if (authData && authData.sessionId) {
+//             setGlobalSessionId(authData.sessionId);
+//             // fetchChatHistory will be triggered by the useEffect watching currentSessionId & token
+//         } else if (token) { 
+//             // Fallback: if authData didn't give a sessionId but we are now logged in (token exists)
+//             console.warn("Auth success but no sessionId in authData, starting new session.");
+//             api.startNewSession().then(data => {
+//                 setGlobalSessionId(data.sessionId);
+//             }).catch(err => toast.error("Failed to initialize session."));
+//         }
+//         // If authData contains more complete user details than what parseToken in AuthContext provides:
+//         if(authData && authData.username && authData._id){
+//             setAuthUser({username: authData.username, id: authData._id}); // Update user in AuthContext
+//         }
+//     };
+    
+//     const handleLogoutAndShowModal = () => {
+//         logout(); // Clears token and user in AuthContext
+//         setGlobalSessionId(null); // Clears session in AppStateContext
+//         localStorage.removeItem('aiTutorSessionId'); // Explicitly clear from localStorage
+//         setMessages([]);
+//         setChatStatus("Logged out. Please login.");
+//         if (!DEV_MODE_BYPASS_AUTH) { // Only force modal if not in full bypass
+//              setShowAuthModal(true); 
+//         } else {
+//             // To test the modal even in dev mode after a "dev logout", you could manually set showAuthModal.
+//             // However, the primary way to see AuthModal in dev mode is to set DEV_MODE_BYPASS_AUTH = false in relevant contexts.
+//             console.log("DEV_MODE: Logged out. To see AuthModal, set DEV_MODE_BYPASS_AUTH=false and refresh, or handle dev logout differently.");
+//             // For testing purposes, if you want a "dev logout" to always show the modal:
+//             // setShowAuthModal(true); 
+//         }
+//         toast.success("Logged out successfully.");
+//     };
+
+//     const handleNewChat = async () => {
+//         try {
+//             const data = await api.startNewSession();
+//             setGlobalSessionId(data.sessionId); // This will trigger useEffect to fetch history (which will be empty)
+//             setMessages([]); // Explicitly clear messages for immediate UI update
+//             setChatStatus("New chat started. Send a message!");
+//             toast.success("New chat started!");
+//         } catch (error) {
+//             toast.error("Failed to start new chat.");
+//             console.error("Failed to start new chat:", error);
+//         }
+//     };
+
+//     // Initial App Loader (Handles both AuthContext loading and DEV_MODE_BYPASS_AUTH logic)
+//     if (appInitializing) { 
+//         return (
+//             <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+//                 <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary mb-4"></div>
+//                 <p className="text-xl">Initializing AI Tutor...</p>
+//             </div>
+//         );
+//     }
+
+//     return (
+//         <div className={`flex flex-col h-screen overflow-hidden font-sans ${theme}`}> {/* Theme class applied here */}
+//             <AnimatePresence>
+//                 {showAuthModal && !token && ( // Show AuthModal if needed and not authenticated
+//                     <AuthModal 
+//                         isOpen={showAuthModal} 
+//                         onClose={handleAuthSuccess} 
+//                     />
+//                 )}
+//             </AnimatePresence>
+
+//             {/* Main application UI rendered if authenticated (token and user exist) */}
+//             {(token && user) && (
+//                 <>
+//                     <TopNav
+//                         user={user} // User from AuthContext
+//                         onLogout={handleLogoutAndShowModal}
+//                         onNewChat={handleNewChat}
+//                         onHistoryClick={() => toast.info("History feature coming soon!")}
+//                         orchestratorStatus={orchestratorStatus}
+//                         // Panel toggles are handled by TopNav itself using AppStateContext
+//                     />
+//                     <div className="flex flex-1 overflow-hidden pt-16 bg-background-light dark:bg-background-dark"> {/* pt-16 for fixed TopNav */}
+//                         <AnimatePresence>
+//                         {isLeftPanelOpen && (
+//                             <motion.aside 
+//                                 key="left-panel"
+//                                 initial={{ x: '-100%', opacity: 0 }}
+//                                 animate={{ x: '0%', opacity: 1 }}
+//                                 exit={{ x: '-100%', opacity: 0 }}
+//                                 transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.3 }}
+//                                 className="w-full md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
+//                             >
+//                                 <LeftPanel />
+//                             </motion.aside>
+//                         )}
+//                         </AnimatePresence>
+
+//                         <main className="flex-1 flex flex-col overflow-hidden p-1 sm:p-2 md:p-4">
+//                            <CenterPanel 
+//                                 messages={messages} 
+//                                 setMessages={setMessages} 
+//                                 currentSessionId={currentSessionId}
+//                                 chatStatus={chatStatus}
+//                                 setChatStatus={setChatStatus}
+//                             />
+//                         </main>
+
+//                         <AnimatePresence>
+//                         {isRightPanelOpen && (
+//                             <motion.aside 
+//                                 key="right-panel"
+//                                 initial={{ x: '100%', opacity: 0 }}
+//                                 animate={{ x: '0%', opacity: 1 }}
+//                                 exit={{ x: '100%', opacity: 0 }}
+//                                 transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.3 }}
+//                                 className="hidden md:block md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
+//                             >
+//                                 <RightPanel />
+//                             </motion.aside>
+//                         )}
+//                         </AnimatePresence>
+//                     </div>
+//                 </>
+//             )}
+            
+//             {/* Fallback UI if not initializing, not authenticated, and AuthModal isn't shown (should be rare) */}
+//             { !appInitializing && !token && !showAuthModal && (
+//                  <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+//                      <p className="text-xl">Please <button 
+//                         onClick={()=> { setShowAuthModal(true); }} 
+//                         className="text-primary hover:underline font-semibold"
+//                         >log in</button> to continue.</p>
+//                  </div>
+//             )}
+//         </div>
+//     );
+// }
+
+// export default App;
+
+
+
+
+
+
+
+
+
+
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useAppState } from './contexts/AppStateContext';
-import AuthModal from './components/auth/AuthModal';
-import TopNav from './components/layout/TopNav';
-import LeftPanel from './components/layout/LeftPanel';
-import CenterPanel from './components/layout/CenterPanel';
-import RightPanel from './components/layout/RightPanel';
+import AuthModal from './components/auth/AuthModal.jsx';
+import TopNav from './components/layout/TopNav.jsx';
+import LeftPanel from './components/layout/LeftPanel.jsx';
+import CenterPanel from './components/layout/CenterPanel.jsx';
+import RightPanel from './components/layout/RightPanel.jsx';
+// If you decided AGAINST collapsed navs, these imports should be removed.
+// If you WANT them, ensure the files exist and these imports are correct.
+// import LeftCollapsedNav from './components/layout/LeftCollapsedNav.jsx';   
+// import RightCollapsedNav from './components/layout/RightCollapsedNav.jsx'; 
+import ChatHistoryModal from './components/chat/ChatHistoryModal.jsx';
 import api from './services/api';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Set this consistently across AuthContext, AppStateContext, and App.jsx for dev mode
-const DEV_MODE_BYPASS_AUTH = true; 
 
 function App() {
     const { 
@@ -1056,104 +1362,95 @@ function App() {
         loading: authLoadingFromContext, 
         logout, 
         setUser: setAuthUser, 
-        // setToken: setAuthToken // We usually let AuthContext manage token setting via login/logout
     } = useAuth();
 
     const { 
         theme, 
-        isLeftPanelOpen, // AppStateContext manages this state
-        isRightPanelOpen, // AppStateContext manages this state
+        isLeftPanelOpen, 
+        isRightPanelOpen, 
         currentSessionId, 
         setSessionId: setGlobalSessionId 
     } = useAppState();
     
-    // Local loading state for App component's own async operations or initial setup
     const [appInitializing, setAppInitializing] = useState(true);
-    const [showAuthModal, setShowAuthModal] = useState(false); // Controls AuthModal visibility
+    const [showAuthModal, setShowAuthModal] = useState(false);
     const [messages, setMessages] = useState([]);
     const [chatStatus, setChatStatus] = useState('Ready. Send a message to start!');
     const [orchestratorStatus, setOrchestratorStatus] = useState({ status: "loading", message: "Connecting..." });
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-    // Initialize theme class on <html> and <body>
+    console.log("App.jsx: Top level render. Token:", token, "User:", user, "authLoadingFromContext:", authLoadingFromContext, "appInitializing:", appInitializing);
+
     useEffect(() => {
         const rootHtmlElement = document.documentElement;
-        const bodyElement = document.body; // If you need body-specific classes too
         if (theme === 'dark') {
             rootHtmlElement.classList.add('dark');
-            // bodyElement.classList.add('dark-theme-body'); // Example
         } else {
             rootHtmlElement.classList.remove('dark');
-            // bodyElement.classList.remove('dark-theme-body');
         }
-        // For more complex body theming, you might set a data-theme attribute
-        // bodyElement.setAttribute('data-theme', theme);
+        console.log("App.jsx: Theme effect, theme is:", theme);
     }, [theme]);
 
-
-    // Auth and Session Initialization Logic
     useEffect(() => {
-        if (DEV_MODE_BYPASS_AUTH) {
-            // In dev bypass mode, AuthContext and AppStateContext should already provide
-            // devUser, devToken, and devSessionId.
-            // App.jsx just needs to ensure it's not stuck in an initializing state.
-            console.log("DEV_MODE (App.jsx): Bypassing auth, user/token should be set by AuthContext.");
-            if (user && token && !currentSessionId) { // If dev user/token set, but no dev session
-                 setGlobalSessionId('dev-session-appjsx-ensure-123'); // Ensure a session ID
-            }
-            setAppInitializing(false); // Bypass complete
-            setShowAuthModal(false);   // Don't show auth modal
-            return;
-        }
-
-        // Real auth flow (if DEV_MODE_BYPASS_AUTH is false)
+        console.log("App.jsx: Auth/Session useEffect triggered. authLoadingFromContext:", authLoadingFromContext, "Token:", token, "User:", user, "currentSessionId:", currentSessionId);
         if (authLoadingFromContext) {
-            setAppInitializing(true); // Still initializing if AuthContext is checking token
+            console.log("App.jsx: AuthContext still loading. Setting appInitializing = true.");
+            setAppInitializing(true);
             return;
         }
 
-        if (!token) { // No token means user is not logged in (AuthContext confirmed this)
-            setShowAuthModal(true);   // Prompt for login/signup
+        // AuthContext has finished loading.
+        console.log("App.jsx: AuthContext finished loading.");
+        if (!token) { 
+            console.log("App.jsx: No token found. Setting showAuthModal = true, appInitializing = false.");
+            setShowAuthModal(true);
             setAppInitializing(false);
-        } else { // Token exists, user is considered logged in
-            setShowAuthModal(false); // Ensure modal is closed
-            if (!currentSessionId) { // Token exists, but no session ID found in AppStateContext
+        } else { 
+            console.log("App.jsx: Token found. Setting showAuthModal = false.");
+            setShowAuthModal(false); 
+            if (user && !currentSessionId) { 
+                console.log("App.jsx: User exists but no currentSessionId. Attempting to start new session.");
                 api.startNewSession().then(data => {
+                    console.log("App.jsx: New session started, sessionId:", data.sessionId);
                     setGlobalSessionId(data.sessionId);
                 }).catch(err => {
                     toast.error("Session initialization failed. Please try logging in again.");
-                    console.error("Session init error after token check:", err);
-                    // Consider if logout is needed here if session is critical
-                    // logout(); 
+                    console.error("App.jsx: Session init error after token check:", err);
                 });
+            } else if (!user) {
+                console.warn("App.jsx: Token exists but user object is null. This might indicate an issue with token parsing in AuthContext or backend JWT structure.");
             }
-            setAppInitializing(false); // Done initializing for authenticated user
+            console.log("App.jsx: Setting appInitializing = false (user authenticated or flow decided).");
+            setAppInitializing(false);
         }
-    }, [token, user, authLoadingFromContext, currentSessionId, setGlobalSessionId, logout]);
+    }, [token, user, authLoadingFromContext, currentSessionId, setGlobalSessionId]);
 
 
-    // Fetch orchestrator status (runs regardless of auth state for general app health)
     useEffect(() => {
+        console.log("App.jsx: Orchestrator status effect triggered.");
         const fetchStatus = async () => {
             const statusData = await api.getOrchestratorStatus();
             setOrchestratorStatus(statusData);
+            console.log("App.jsx: Orchestrator status fetched:", statusData);
         };
         fetchStatus();
-        const intervalId = setInterval(fetchStatus, 20000); // Check every 20 seconds
+        const intervalId = setInterval(fetchStatus, 20000);
         return () => clearInterval(intervalId);
     }, []);
 
-    // Fetch chat history when session ID or token changes (and both are present)
     const fetchChatHistory = useCallback(async (sid) => {
-        if (!sid || !token) { // Need both session and token
+        console.log("App.jsx: fetchChatHistory called for session:", sid, "Token:", token ? "present" : "absent");
+        if (!sid || !token) {
             setMessages([]);
             setChatStatus(token ? "Start or select a chat." : "Please login to see chat history.");
             return;
         }
         setChatStatus("Loading history...");
         try {
-            const historyData = await api.getChatHistory(sid); // Token auto-included by API service
+            const historyData = await api.getChatHistory(sid);
+            console.log("App.jsx: Fetched chat history data:", historyData);
             const formattedMessages = (Array.isArray(historyData) ? historyData : []).map(msg => ({
-                id: msg.id || msg._id || String(Math.random() + Date.now()), // Ensure unique key
+                id: msg.id || msg._id || String(Math.random() + Date.now()),
                 sender: msg.role === 'model' ? 'bot' : 'user',
                 text: msg.parts && msg.parts.length > 0 ? msg.parts[0].text : (msg.text || ''),
                 thinking: msg.thinking,
@@ -1166,77 +1463,74 @@ function App() {
         } catch (error) {
             toast.error(`Failed to load chat history: ${error.message}`);
             setChatStatus("Error loading history.");
-            console.error("Failed to load chat history:", error);
+            console.error("App.jsx: Failed to load chat history:", error);
         }
-    }, [token]); // Depends on token to make the API call
+    }, [token]); 
 
     useEffect(() => {
-        // This effect runs when currentSessionId or token changes.
-        // It calls fetchChatHistory if both are present.
+        console.log("App.jsx: Chat history trigger useEffect. currentSessionId:", currentSessionId, "Token:", token ? "present" : "absent");
         if (currentSessionId && token) {
             fetchChatHistory(currentSessionId);
-        } else if (!token) { // If token becomes null (e.g., after logout)
-            setMessages([]); // Clear messages
+        } else if (!token) {
+            setMessages([]);
             setChatStatus("Please login.");
         }
-        // If token exists but currentSessionId is null, the auth useEffect should handle starting a new session
     }, [currentSessionId, token, fetchChatHistory]);
 
-
-    const handleAuthSuccess = (authData) => { // Called by AuthModal after successful login/signup/devLogin
+    const handleAuthSuccess = (authData) => {
+        console.log("App.jsx: handleAuthSuccess called with data:", authData);
         setShowAuthModal(false);
-        // AuthContext's login/signup/devLogin methods should have set the token and user in AuthContext.
-        // App.jsx uses the `user` and `token` from `useAuth()`.
-        // The main task here is to ensure the session ID from authData is set globally.
         if (authData && authData.sessionId) {
             setGlobalSessionId(authData.sessionId);
-            // fetchChatHistory will be triggered by the useEffect watching currentSessionId & token
         } else if (token) { 
-            // Fallback: if authData didn't give a sessionId but we are now logged in (token exists)
-            console.warn("Auth success but no sessionId in authData, starting new session.");
+            console.warn("App.jsx handleAuthSuccess: Auth successful but no sessionId in authData, starting new session as fallback.");
             api.startNewSession().then(data => {
                 setGlobalSessionId(data.sessionId);
             }).catch(err => toast.error("Failed to initialize session."));
         }
-        // If authData contains more complete user details than what parseToken in AuthContext provides:
-        if(authData && authData.username && authData._id){
-            setAuthUser({username: authData.username, id: authData._id}); // Update user in AuthContext
+        if(authData && authData.username && authData._id){ // Ensure AuthContext's user is also updated if more detail comes from backend
+            setAuthUser({username: authData.username, id: authData._id}); 
         }
     };
     
     const handleLogoutAndShowModal = () => {
-        logout(); // Clears token and user in AuthContext
-        setGlobalSessionId(null); // Clears session in AppStateContext
-        localStorage.removeItem('aiTutorSessionId'); // Explicitly clear from localStorage
+        console.log("App.jsx: handleLogoutAndShowModal called.");
+        logout(); 
+        setGlobalSessionId(null);
+        localStorage.removeItem('aiTutorSessionId'); 
         setMessages([]);
         setChatStatus("Logged out. Please login.");
-        if (!DEV_MODE_BYPASS_AUTH) { // Only force modal if not in full bypass
-             setShowAuthModal(true); 
-        } else {
-            // To test the modal even in dev mode after a "dev logout", you could manually set showAuthModal.
-            // However, the primary way to see AuthModal in dev mode is to set DEV_MODE_BYPASS_AUTH = false in relevant contexts.
-            console.log("DEV_MODE: Logged out. To see AuthModal, set DEV_MODE_BYPASS_AUTH=false and refresh, or handle dev logout differently.");
-            // For testing purposes, if you want a "dev logout" to always show the modal:
-            // setShowAuthModal(true); 
-        }
+        setShowAuthModal(true); 
         toast.success("Logged out successfully.");
     };
 
     const handleNewChat = async () => {
+        console.log("App.jsx: handleNewChat called.");
         try {
             const data = await api.startNewSession();
-            setGlobalSessionId(data.sessionId); // This will trigger useEffect to fetch history (which will be empty)
-            setMessages([]); // Explicitly clear messages for immediate UI update
+            setGlobalSessionId(data.sessionId);
+            setMessages([]);
             setChatStatus("New chat started. Send a message!");
             toast.success("New chat started!");
         } catch (error) {
             toast.error("Failed to start new chat.");
-            console.error("Failed to start new chat:", error);
+            console.error("App.jsx: Failed to start new chat:", error);
         }
     };
 
-    // Initial App Loader (Handles both AuthContext loading and DEV_MODE_BYPASS_AUTH logic)
+    const handleSelectSessionFromHistory = (sessionId) => {
+        console.log("App.jsx: handleSelectSessionFromHistory called with sessionId:", sessionId);
+        if (sessionId && sessionId !== currentSessionId) {
+            setGlobalSessionId(sessionId); 
+            toast.success(`Loading session...`);
+        } else if (sessionId === currentSessionId) {
+            toast.info("This session is already loaded.");
+        }
+        setIsHistoryModalOpen(false); 
+    };
+
     if (appInitializing) { 
+        console.log("App.jsx: Rendering Initializing AI Tutor... screen.");
         return (
             <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary mb-4"></div>
@@ -1245,45 +1539,48 @@ function App() {
         );
     }
 
+    console.log("App.jsx: Proceeding to render AuthModal or Main App. showAuthModal:", showAuthModal, "Token:", token, "User:", user);
     return (
-        <div className={`flex flex-col h-screen overflow-hidden font-sans ${theme}`}> {/* Theme class applied here */}
+        <div className={`flex flex-col h-screen overflow-hidden font-sans ${theme}`}>
             <AnimatePresence>
-                {showAuthModal && !token && ( // Show AuthModal if needed and not authenticated
-                    <AuthModal 
-                        isOpen={showAuthModal} 
-                        onClose={handleAuthSuccess} 
-                    />
+                {showAuthModal && !token && (
+                    <AuthModal isOpen={showAuthModal} onClose={handleAuthSuccess} />
                 )}
             </AnimatePresence>
 
-            {/* Main application UI rendered if authenticated (token and user exist) */}
             {(token && user) && (
                 <>
                     <TopNav
-                        user={user} // User from AuthContext
+                        user={user}
                         onLogout={handleLogoutAndShowModal}
                         onNewChat={handleNewChat}
-                        onHistoryClick={() => toast.info("History feature coming soon!")}
+                        onHistoryClick={() => { console.log("App.jsx: History button clicked."); setIsHistoryModalOpen(true); }}
                         orchestratorStatus={orchestratorStatus}
-                        // Panel toggles are handled by TopNav itself using AppStateContext
                     />
-                    <div className="flex flex-1 overflow-hidden pt-16 bg-background-light dark:bg-background-dark"> {/* pt-16 for fixed TopNav */}
-                        <AnimatePresence>
-                        {isLeftPanelOpen && (
-                            <motion.aside 
-                                key="left-panel"
-                                initial={{ x: '-100%', opacity: 0 }}
-                                animate={{ x: '0%', opacity: 1 }}
-                                exit={{ x: '-100%', opacity: 0 }}
-                                transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.3 }}
-                                className="w-full md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
-                            >
-                                <LeftPanel />
-                            </motion.aside>
-                        )}
+                    <div className="flex flex-1 overflow-hidden pt-16 bg-background-light dark:bg-background-dark">
+                        <AnimatePresence mode="wait">
+                            {isLeftPanelOpen ? (
+                                <motion.aside 
+                                    key="left-panel-main"
+                                    initial={{ x: '-100%', opacity: 0.5 }}
+                                    animate={{ x: '0%', opacity: 1 }}
+                                    exit={{ x: '-100%', opacity: 0.5 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                                    className="w-full md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
+                                >
+                                    <LeftPanel /> 
+                                </motion.aside>
+                            ) : (
+                                // If you want collapsed navs, ensure they are imported and files exist
+                                // <LeftCollapsedNav /> 
+                                null // Or render nothing if panel is closed and no collapsed nav
+                            )}
                         </AnimatePresence>
-
-                        <main className="flex-1 flex flex-col overflow-hidden p-1 sm:p-2 md:p-4">
+                        
+                        <main className={`flex-1 flex flex-col overflow-hidden p-1 sm:p-2 md:p-4 
+                                         transition-all duration-300 ease-in-out
+                                         ${isLeftPanelOpen ? 'lg:ml-0' : 'lg:ml-0'}  {/* Adjust if using collapsed nav width */}
+                                         ${isRightPanelOpen ? 'lg:mr-0' : 'lg:mr-0'} {/* Adjust if using collapsed nav width */} `}>
                            <CenterPanel 
                                 messages={messages} 
                                 setMessages={setMessages} 
@@ -1293,25 +1590,33 @@ function App() {
                             />
                         </main>
 
-                        <AnimatePresence>
-                        {isRightPanelOpen && (
-                            <motion.aside 
-                                key="right-panel"
-                                initial={{ x: '100%', opacity: 0 }}
-                                animate={{ x: '0%', opacity: 1 }}
-                                exit={{ x: '100%', opacity: 0 }}
-                                transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.3 }}
-                                className="hidden md:block md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
-                            >
-                                <RightPanel />
-                            </motion.aside>
-                        )}
+                        <AnimatePresence mode="wait">
+                            {isRightPanelOpen ? (
+                                <motion.aside 
+                                    key="right-panel-main"
+                                    initial={{ x: '100%', opacity: 0.5 }}
+                                    animate={{ x: '0%', opacity: 1 }}
+                                    exit={{ x: '100%', opacity: 0.5 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                                    className="hidden md:flex md:flex-col md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-l border-border-light dark:border-border-dark overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
+                                >
+                                    <RightPanel />
+                                </motion.aside>
+                            ) : (
+                                // <RightCollapsedNav />
+                                null // Or render nothing
+                            )}
                         </AnimatePresence>
                     </div>
+                    
+                    <ChatHistoryModal
+                        isOpen={isHistoryModalOpen}
+                        onClose={() => setIsHistoryModalOpen(false)}
+                        onSelectSession={handleSelectSessionFromHistory}
+                    />
                 </>
             )}
             
-            {/* Fallback UI if not initializing, not authenticated, and AuthModal isn't shown (should be rare) */}
             { !appInitializing && !token && !showAuthModal && (
                  <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
                      <p className="text-xl">Please <button 
@@ -1934,6 +2239,181 @@ function ChatHistory({ messages, isLoading }) {
     );
 }
 export default ChatHistory;
+
+```
+
+`src/components/chat/ChatHistoryModal.jsx`
+
+```javascript
+import React, { useState, useEffect, useCallback } from 'react';
+import api from '../../services/api';
+import toast from 'react-hot-toast';
+import { X, MessageSquareText, Loader2, AlertTriangle } from 'lucide-react';
+import Modal from '../core/Modal.jsx'; // Assuming your generic Modal component
+
+const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+        return new Date(dateString).toLocaleString(undefined, { 
+            month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
+    } catch (e) {
+        return 'Invalid Date';
+    }
+};
+
+function ChatHistoryModal({ isOpen, onClose, onSelectSession }) {
+    const [sessions, setSessions] = useState([]);
+    const [selectedSessionId, setSelectedSessionId] = useState(null);
+    const [sessionMessages, setSessionMessages] = useState([]);
+    const [loadingSessions, setLoadingSessions] = useState(false);
+    const [loadingMessages, setLoadingMessages] = useState(false);
+    const [error, setError] = useState('');
+
+    const fetchSessions = useCallback(async () => {
+        if (!isOpen) return; 
+        setLoadingSessions(true);
+        setError('');
+        try {
+            const data = await api.getChatSessions(); 
+            setSessions(Array.isArray(data) ? data : []);
+        } catch (err) {
+            toast.error("Failed to load chat sessions.");
+            setError(err.message || "Could not fetch sessions.");
+        } finally {
+            setLoadingSessions(false);
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (isOpen) { // Only fetch when modal becomes open
+            fetchSessions();
+            setSelectedSessionId(null); // Reset selection when modal reopens
+            setSessionMessages([]);
+        }
+    }, [isOpen, fetchSessions]); 
+
+    const handleSessionSelect = async (sessionId) => {
+        if (selectedSessionId === sessionId) return; // Avoid re-fetching if already selected
+
+        setSelectedSessionId(sessionId);
+        setLoadingMessages(true);
+        setSessionMessages([]);
+        setError(''); 
+        try {
+            const historyData = await api.getChatHistory(sessionId);
+            setSessionMessages((Array.isArray(historyData) ? historyData : []).map(msg => ({
+                id: msg.id || msg._id || String(Math.random() + Date.now()),
+                sender: msg.role === 'model' ? 'bot' : 'user',
+                text: msg.parts && msg.parts.length > 0 ? msg.parts[0].text : (msg.text || ''),
+                timestamp: msg.timestamp
+            })));
+        } catch (err) {
+            toast.error("Failed to load messages for this session.");
+            setError(`Error loading messages: ${err.message}`);
+        } finally {
+            setLoadingMessages(false);
+        }
+    };
+
+    const handleLoadSessionAndClose = () => {
+        if (selectedSessionId) {
+            onSelectSession(selectedSessionId); 
+            onClose();
+        } else {
+            toast.error("Please select a session to load.");
+        }
+    };
+    
+    // Placeholder for delete functionality
+    // const handleDeleteSession = async (sessionIdToDelete, e) => { ... };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Chat History" size="2xl">
+            <div className="flex flex-col md:flex-row gap-4 max-h-[70vh] h-[70vh]">
+                {/* Sessions List */}
+                <div className="w-full md:w-1/3 border-r border-border-light dark:border-border-dark pr-0 md:pr-2 overflow-y-auto custom-scrollbar">
+                    <h3 className="text-sm font-semibold mb-2 text-text-light dark:text-text-dark px-1">Sessions</h3>
+                    {loadingSessions && <div className="flex justify-center p-4"><Loader2 className="animate-spin text-primary" size={24}/></div>}
+                    {!loadingSessions && error && !sessions.length && <div className="text-red-500 text-xs p-2">{error}</div>}
+                    {!loadingSessions && !error && sessions.length === 0 && <p className="text-xs text-text-muted-light dark:text-text-muted-dark p-2">No past sessions found.</p>}
+                    
+                    <ul className="space-y-1">
+                        {sessions.map(session => (
+                            <li key={session.sessionId}
+                                onClick={() => handleSessionSelect(session.sessionId)}
+                                className={`p-2.5 rounded-md cursor-pointer text-xs transition-colors group relative
+                                            ${selectedSessionId === session.sessionId 
+                                                ? 'bg-primary text-white dark:bg-primary-dark' 
+                                                : 'bg-surface-light dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                            >
+                                <div className="font-medium truncate" title={session.preview}>{session.preview || `Session ${session.sessionId.substring(0,8)}`}</div>
+                                <div className={`text-[0.7rem] ${selectedSessionId === session.sessionId ? 'text-blue-100 dark:text-blue-200' : 'text-text-muted-light dark:text-text-muted-dark'}`}>
+                                    {formatDate(session.updatedAt)} - {session.messageCount} msgs
+                                </div>
+                                {/* Delete button placeholder
+                                <button 
+                                    className="absolute top-1 right-1 p-1 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={(e) => handleDeleteSession(session.sessionId, e)}
+                                    title="Delete session"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                                */}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                {/* Session Details */}
+                <div className="w-full md:w-2/3 flex flex-col overflow-hidden mt-4 md:mt-0">
+                    <h3 className="text-sm font-semibold mb-2 text-text-light dark:text-text-dark">Session Details</h3>
+                    <div className="flex-grow bg-gray-50 dark:bg-gray-800 p-3 rounded-md overflow-y-auto custom-scrollbar border border-border-light dark:border-border-dark">
+                        {loadingMessages && <div className="flex justify-center p-4"><Loader2 className="animate-spin text-primary" size={24} /></div>}
+                        {!selectedSessionId && !loadingMessages && (
+                            <div className="flex flex-col items-center justify-center h-full text-text-muted-light dark:text-text-muted-dark text-sm">
+                                <MessageSquareText size={40} className="mb-3 opacity-50" />
+                                <p>Select a session from the left to view its messages.</p>
+                            </div>
+                        )}
+                        {selectedSessionId && !loadingMessages && sessionMessages.length === 0 && 
+                            <p className="text-center text-sm text-text-muted-light dark:text-text-muted-dark p-4">No messages in this session.</p>
+                        }
+                        <div className="space-y-3">
+                            {sessionMessages.map(msg => (
+                                <div key={msg.id} 
+                                     className={`p-2.5 rounded-lg shadow-sm w-fit max-w-[90%] text-xs
+                                                ${msg.sender === 'user' 
+                                                    ? 'bg-blue-500 text-white ml-auto' 
+                                                    : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100'}`}>
+                                    <p className="font-semibold text-[0.7rem] mb-0.5">{msg.sender === 'user' ? 'You' : 'AI Tutor'}</p>
+                                    <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                                    <p className="text-[0.65rem] opacity-70 mt-1 text-right">{formatDate(msg.timestamp)}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div className="mt-6 pt-4 border-t border-border-light dark:border-border-dark flex justify-end gap-3">
+                <button 
+                    onClick={onClose} 
+                    className="px-4 py-2 text-xs font-medium rounded-md bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-text-light dark:text-text-dark transition-colors"
+                >
+                    Close
+                </button>
+                <button 
+                    onClick={handleLoadSessionAndClose} 
+                    className="px-4 py-2 text-xs font-medium rounded-md btn-primary disabled:opacity-50"
+                    disabled={!selectedSessionId || loadingMessages || loadingSessions}
+                >
+                    Load Selected Session
+                </button>
+            </div>
+        </Modal>
+    );
+}
+export default ChatHistoryModal;
 ```
 
 `src/components/chat/ChatInput.jsx`
@@ -2548,6 +3028,7 @@ function DocumentList() {
     );
 }
 export default DocumentList;
+
 ```
 
 `src/components/documents/DocumentUpload.jsx`
@@ -2681,7 +3162,112 @@ export default DocumentUpload;
 `src/components/layout/CenterPanel.jsx`
 
 ```javascript
-import React, { useState, useEffect } from 'react';
+// import React, { useState, useEffect } from 'react';
+// import ChatHistory from '../chat/ChatHistory';
+// import ChatInput from '../chat/ChatInput';
+// import api from '../../services/api';
+// import { useAuth } from '../../hooks/useAuth';
+// import { useAppState } from '../../contexts/AppStateContext';
+// import toast from 'react-hot-toast';
+
+// function CenterPanel({ messages, setMessages, currentSessionId, chatStatus, setChatStatus }) {
+//     const { token } = useAuth();
+//     const { selectedLLM } = useAppState(); // To know which LLM is active
+//     const [useRag, setUseRag] = useState(false); // Local state for RAG toggle in this panel
+//     const [isSending, setIsSending] = useState(false);
+    
+//     const handleSendMessage = async (inputText) => {
+//         if (!inputText.trim() || !token || isSending) return;
+
+//         const userMessage = {
+//             id: `user-${Date.now()}`,
+//             sender: 'user',
+//             text: inputText.trim(),
+//             timestamp: new Date().toISOString()
+//         };
+//         setMessages(prev => [...prev, userMessage]);
+        
+//         setIsSending(true);
+//         setChatStatus(useRag ? "Searching documents & Thinking (Ollama RAG)..." : "Thinking (Gemini)...");
+
+//         try {
+//             const historyForBackend = messages.map(m => ({ // Only previous messages
+//                 role: m.sender === 'bot' ? 'model' : 'user',
+//                 parts: [{ text: m.text }]
+//             }));
+
+//             const payload = {
+//                 query: inputText.trim(),
+//                 history: historyForBackend,
+//                 sessionId: currentSessionId,
+//                 useRag: useRag // This flag is crucial for the backend orchestrator
+//             };
+            
+//             const response = await api.sendMessage(payload); // Token auto-included by axios interceptor
+            
+//             // currentSessionId is managed by App.js if backend returns a new one
+//             // For now, assume session ID remains the same unless explicitly changed by App.js
+
+//             const botReply = response.reply;
+//             setMessages(prev => [...prev, {
+//                 id: `bot-${Date.now()}`,
+//                 sender: 'bot',
+//                 text: botReply.parts[0]?.text,
+//                 thinking: botReply.thinking,
+//                 references: botReply.references || [],
+//                 timestamp: botReply.timestamp,
+//                 source_pipeline: response.source_pipeline // Useful for display
+//             }]);
+//             setChatStatus(`Responded via ${response.source_pipeline}.`);
+//         } catch (error) {
+//             console.error("Error sending message:", error);
+//             const errorText = error.response?.data?.message || error.message || 'Failed to get response.';
+//             setMessages(prev => [...prev, { 
+//                 id: `error-${Date.now()}`, 
+//                 sender: 'bot', 
+//                 text: `Error: ${errorText}` 
+//             }]);
+//             setChatStatus(`Error: ${errorText}`);
+//             toast.error(errorText);
+//         } finally {
+//             setIsSending(false);
+//         }
+//     };
+
+//     return (
+//         <div className="flex flex-col h-full bg-background-light dark:bg-background-dark rounded-lg shadow-inner">
+//             {/* Welcome Message - Conditional */}
+//             {messages.length === 0 && !isSending && (
+//                  <div className="p-8 text-center text-text-muted-light dark:text-text-muted-dark animate-fadeIn">
+//                     <h2 className="text-2xl font-semibold mb-2">HELLO MY FRIEND,</h2>
+//                     <p className="text-lg">HOW CAN I ASSIST YOU TODAY?</p>
+//                     <p className="text-sm mt-4">
+//                         Toggle "Use My Documents" below to chat with your uploaded files using Ollama RAG,
+//                         or chat directly with {selectedLLM.toUpperCase()} for general queries.
+//                     </p>
+//                 </div>
+//             )}
+
+//             <ChatHistory messages={messages} isLoading={isSending} />
+//             <ChatInput 
+//                 onSendMessage={handleSendMessage} 
+//                 isLoading={isSending} 
+//                 currentStatus={chatStatus}
+//                 useRag={useRag}
+//                 setUseRag={setUseRag}
+//             />
+//         </div>
+//     );
+// }
+// export default CenterPanel;
+
+
+
+
+
+
+// src/components/layout/CenterPanel.jsx
+import React, { useState } from 'react';
 import ChatHistory from '../chat/ChatHistory';
 import ChatInput from '../chat/ChatInput';
 import api from '../../services/api';
@@ -2691,15 +3277,16 @@ import toast from 'react-hot-toast';
 
 function CenterPanel({ messages, setMessages, currentSessionId, chatStatus, setChatStatus }) {
     const { token } = useAuth();
-    const { selectedLLM } = useAppState(); // To know which LLM is active
-    const [useRag, setUseRag] = useState(false); // Local state for RAG toggle in this panel
+    // Get systemPrompt from global state
+    const { selectedLLM, systemPrompt } = useAppState(); 
+    const [useRag, setUseRag] = useState(false); // RAG toggle state
     const [isSending, setIsSending] = useState(false);
     
     const handleSendMessage = async (inputText) => {
         if (!inputText.trim() || !token || isSending) return;
 
         const userMessage = {
-            id: `user-${Date.now()}`,
+            id: `user-${Date.now()}-${Math.random().toString(16).slice(2)}`,
             sender: 'user',
             text: inputText.trim(),
             timestamp: new Date().toISOString()
@@ -2707,10 +3294,22 @@ function CenterPanel({ messages, setMessages, currentSessionId, chatStatus, setC
         setMessages(prev => [...prev, userMessage]);
         
         setIsSending(true);
-        setChatStatus(useRag ? "Searching documents & Thinking (Ollama RAG)..." : "Thinking (Gemini)...");
+        let thinkingStatus = "Thinking...";
+        if (useRag) {
+            thinkingStatus = `Searching docs & Thinking (${selectedLLM.toUpperCase()} RAG)...`;
+        } else {
+            thinkingStatus = `Thinking (${selectedLLM.toUpperCase()})...`;
+        }
+        // Add system prompt to status if it's custom or not the default
+        const defaultInitialPrompt = "You are a helpful AI engineering tutor."; // Or fetch from your presets
+        if (systemPrompt && systemPrompt !== defaultInitialPrompt) {
+            thinkingStatus += ` (Mode: ${systemPrompt.substring(0,25)}...)`;
+        }
+        setChatStatus(thinkingStatus);
+
 
         try {
-            const historyForBackend = messages.map(m => ({ // Only previous messages
+            const historyForBackend = messages.map(m => ({
                 role: m.sender === 'bot' ? 'model' : 'user',
                 parts: [{ text: m.text }]
             }));
@@ -2719,34 +3318,39 @@ function CenterPanel({ messages, setMessages, currentSessionId, chatStatus, setC
                 query: inputText.trim(),
                 history: historyForBackend,
                 sessionId: currentSessionId,
-                useRag: useRag // This flag is crucial for the backend orchestrator
+                useRag: useRag,
+                llmProvider: selectedLLM, // Send the selected LLM provider
+                systemPrompt: systemPrompt // Send the current system prompt text
             };
             
-            const response = await api.sendMessage(payload); // Token auto-included by axios interceptor
+            const response = await api.sendMessage(payload);
             
-            // currentSessionId is managed by App.js if backend returns a new one
-            // For now, assume session ID remains the same unless explicitly changed by App.js
-
             const botReply = response.reply;
-            setMessages(prev => [...prev, {
-                id: `bot-${Date.now()}`,
-                sender: 'bot',
-                text: botReply.parts[0]?.text,
-                thinking: botReply.thinking,
-                references: botReply.references || [],
-                timestamp: botReply.timestamp,
-                source_pipeline: response.source_pipeline // Useful for display
-            }]);
-            setChatStatus(`Responded via ${response.source_pipeline}.`);
+            if (botReply && botReply.parts && botReply.parts.length > 0) {
+                setMessages(prev => [...prev, {
+                    id: `bot-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                    sender: 'bot',
+                    text: botReply.parts[0]?.text,
+                    thinking: botReply.thinking,
+                    references: botReply.references || [],
+                    timestamp: botReply.timestamp || new Date().toISOString(),
+                    source_pipeline: response.source_pipeline
+                }]);
+                setChatStatus(`Responded via ${response.source_pipeline || selectedLLM.toUpperCase()}.`);
+            } else {
+                throw new Error("Invalid response structure from AI.");
+            }
+
         } catch (error) {
             console.error("Error sending message:", error);
             const errorText = error.response?.data?.message || error.message || 'Failed to get response.';
             setMessages(prev => [...prev, { 
-                id: `error-${Date.now()}`, 
+                id: `error-${Date.now()}-${Math.random().toString(16).slice(2)}`, 
                 sender: 'bot', 
-                text: `Error: ${errorText}` 
+                text: `Error: ${errorText}`,
+                timestamp: new Date().toISOString()
             }]);
-            setChatStatus(`Error: ${errorText}`);
+            setChatStatus(`Error: ${errorText.substring(0,50)}...`);
             toast.error(errorText);
         } finally {
             setIsSending(false);
@@ -2755,15 +3359,21 @@ function CenterPanel({ messages, setMessages, currentSessionId, chatStatus, setC
 
     return (
         <div className="flex flex-col h-full bg-background-light dark:bg-background-dark rounded-lg shadow-inner">
-            {/* Welcome Message - Conditional */}
             {messages.length === 0 && !isSending && (
-                 <div className="p-8 text-center text-text-muted-light dark:text-text-muted-dark animate-fadeIn">
-                    <h2 className="text-2xl font-semibold mb-2">HELLO MY FRIEND,</h2>
-                    <p className="text-lg">HOW CAN I ASSIST YOU TODAY?</p>
-                    <p className="text-sm mt-4">
-                        Toggle "Use My Documents" below to chat with your uploaded files using Ollama RAG,
-                        or chat directly with {selectedLLM.toUpperCase()} for general queries.
-                    </p>
+                 <div className="p-6 sm:p-8 text-center text-text-muted-light dark:text-text-muted-dark animate-fadeIn">
+                    <h2 className="text-xl sm:text-2xl font-semibold mb-2 text-text-light dark:text-text-dark">HELLO MY FRIEND,</h2>
+                    <p className="text-base sm:text-lg mb-3">HOW CAN I ASSIST YOU TODAY?</p>
+                    <div className="text-xs sm:text-sm space-y-1">
+                        <p>
+                            Current LLM: <span className="font-semibold text-accent">{selectedLLM.toUpperCase()}</span>.
+                        </p>
+                        <p className="max-w-md mx-auto">
+                            Assistant Mode: <span className="italic">"{systemPrompt.length > 60 ? systemPrompt.substring(0,60)+'...' : systemPrompt}"</span>
+                        </p>
+                        <p className="mt-2">
+                            Toggle "Use My Docs" below for RAG-enhanced chat.
+                        </p>
+                    </div>
                 </div>
             )}
 
@@ -2781,45 +3391,256 @@ function CenterPanel({ messages, setMessages, currentSessionId, chatStatus, setC
 export default CenterPanel;
 ```
 
+`src/components/layout/LeftCollapsedNav.jsx`
+
+```javascript
+// frontend/src/components/layout/LeftCollapsedNav.jsx
+import React from 'react';
+import { useAppState } from '../../contexts/AppStateContext.jsx'; // Ensure .jsx
+import { Edit3, UploadCloud, FileText, ChevronRight } from 'lucide-react';
+import IconButton from '../core/IconButton.jsx'; // Ensure .jsx
+import { motion } from 'framer-motion';
+
+const iconMap = {
+    prompt: Edit3,
+    upload: UploadCloud,
+    docs: FileText,
+};
+
+function LeftCollapsedNav() {
+    const { setIsLeftPanelOpen } = useAppState();
+
+    const navItems = [
+        { id: 'prompt', label: 'Custom Prompt', iconName: 'Edit3', action: () => { setIsLeftPanelOpen(true); } },
+        { id: 'upload', label: 'Upload Document', iconName: 'UploadCloud', action: () => { setIsLeftPanelOpen(true); } },
+        { id: 'docs', label: 'Document List', iconName: 'FileText', action: () => { setIsLeftPanelOpen(true); } },
+    ];
+
+    return (
+        <motion.aside
+            key="left-collapsed-nav"
+            initial={{ x: '-100%', opacity: 0 }}
+            animate={{ x: '0%', opacity: 1 }}
+            exit={{ x: '-100%', opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.2 }}
+            // Use fixed positioning to overlay or sit beside content
+            // top-16 to account for TopNav height, bottom-0 to fill height
+            // z-30 to be above content but below modals
+            // w-14 for smaller screens, sm:w-16 for slightly larger
+            className="fixed left-0 top-16 bottom-0 z-30 w-14 sm:w-16 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark shadow-md flex flex-col items-center py-4 space-y-3 custom-scrollbar"
+        >
+            {navItems.map(item => {
+                const Icon = iconMap[item.iconName] || Edit3; // Fallback icon
+                return (
+                    <IconButton 
+                        key={item.id}
+                        icon={Icon} // Pass the component directly
+                        onClick={item.action}
+                        title={item.label}
+                        ariaLabel={item.label}
+                        variant="ghost"
+                        size="md" 
+                        className="text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-light"
+                    />
+                );
+            })}
+            <div className="mt-auto flex-grow flex items-end pb-2"> {/* Pushes open button to bottom */}
+                <IconButton 
+                    icon={ChevronRight}
+                    onClick={() => setIsLeftPanelOpen(true)}
+                    title="Open Assistant Panel"
+                    ariaLabel="Open Assistant Panel"
+                    variant="ghost"
+                    size="md"
+                    className="text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-light"
+                />
+            </div>
+        </motion.aside>
+    );
+}
+export default LeftCollapsedNav;
+```
+
 `src/components/layout/LeftPanel.jsx`
 
 ```javascript
-import React, { useState } from 'react';
-import DocumentUpload from '../documents/DocumentUpload';
-import DocumentList from '../documents/DocumentList';
-import { ChevronDown, ChevronUp, FilePlus, ListFilter, Settings2 } from 'lucide-react'; // Example icons
+// import React, { useState } from 'react';
+// import DocumentUpload from '../documents/DocumentUpload';
+// import DocumentList from '../documents/DocumentList';
+// import { ChevronDown, ChevronUp, FilePlus, ListFilter, Settings2 } from 'lucide-react'; // Example icons
+
+// function LeftPanel() {
+//     const [isPromptSectionOpen, setIsPromptSectionOpen] = useState(true);
+//     const [systemPrompt, setSystemPrompt] = useState("You are a helpful AI engineering tutor."); // Default system prompt
+//     const [isDocManagementOpen, setIsDocManagementOpen] = useState(true);
+
+//     // TODO: Fetch and manage document list state, pass to DocumentList & DocumentUpload
+//     // TODO: Implement prompt management (save/load presets)
+
+//     return (
+//         <div className="flex flex-col h-full">
+//             {/* Custom Prompt Section */}
+//             <div className="mb-4">
+//                 <button 
+//                     onClick={() => setIsPromptSectionOpen(!isPromptSectionOpen)}
+//                     className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md focus:outline-none"
+//                 >
+//                     <span><Settings2 size={16} className="inline mr-2" /> Custom Prompt</span>
+//                     {isPromptSectionOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+//                 </button>
+//                 {isPromptSectionOpen && (
+//                     <div className="mt-2 p-3 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-600 rounded-md animate-fadeIn">
+//                         {/* Dropdown for prompt presets - To be implemented */}
+//                         <textarea
+//                             value={systemPrompt}
+//                             onChange={(e) => setSystemPrompt(e.target.value)}
+//                             rows="3"
+//                             className="input-custom text-xs"
+//                             placeholder="Enter system prompt (e.g., Act as an expert in thermodynamics...)"
+//                         />
+//                         {/* Buttons for Save/Load prompt presets */}
+//                     </div>
+//                 )}
+//             </div>
+
+//             {/* Document Management Section */}
+//             <div className="flex-grow flex flex-col overflow-hidden">
+//                  <button 
+//                     onClick={() => setIsDocManagementOpen(!isDocManagementOpen)}
+//                     className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md focus:outline-none mb-2"
+//                 >
+//                     <span><FilePlus size={16} className="inline mr-2" /> Document Management</span>
+//                     {isDocManagementOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+//                 </button>
+//                 {isDocManagementOpen && (
+//                     <div className="flex-grow flex flex-col overflow-hidden animate-fadeIn">
+//                         <DocumentUpload onUploadSuccess={() => { /* TODO: refresh doc list */ }} />
+//                         <div className="mt-3 flex-grow overflow-y-auto">
+//                              {/* SELECT DOCUMENT with filter dropdown - placeholder */}
+//                             <div className="mb-2">
+//                                 <label htmlFor="doc-filter" className="text-xs text-text-muted-light dark:text-text-muted-dark">Filter documents:</label>
+//                                 <select id="doc-filter" className="input-custom input-custom text-xs mt-1">
+//                                     <option value="all">All Documents</option>
+//                                     <option value="pdf">PDFs</option>
+//                                     {/* More filter options */}
+//                                 </select>
+//                             </div>
+//                             <DocumentList />
+//                         </div>
+//                     </div>
+//                 )}
+//             </div>
+//              {/* TODO: Document Preview Capabilities - complex, maybe a modal or dedicated view */}
+//         </div>
+//     );
+// }
+// export default LeftPanel;
+
+
+
+
+
+
+
+
+
+// frontend/src/components/layout/LeftPanel.jsx
+import React, { useState, useEffect } from 'react';
+import { useAppState } from '../../contexts/AppStateContext';
+import DocumentUpload from '../documents/DocumentUpload.jsx'; // Added .jsx
+import DocumentList from '../documents/DocumentList.jsx';   // Added .jsx
+import { PanelLeftClose, ChevronDown, ChevronUp, FilePlus, Settings2, Bot, BookOpen, Lightbulb } from 'lucide-react';
+import IconButton from '../core/IconButton.jsx';         // Added .jsx
+import { motion } from 'framer-motion';
+
+const PROMPT_PRESETS = [ /* ... as defined in that response ... */ ];
+// ... (PROMPT_PRESETS array as defined previously)
 
 function LeftPanel() {
+    const { setIsLeftPanelOpen, systemPrompt, setSystemPrompt, selectDocumentForAnalysis, selectedDocumentForAnalysis } = useAppState();
+    
     const [isPromptSectionOpen, setIsPromptSectionOpen] = useState(true);
-    const [systemPrompt, setSystemPrompt] = useState("You are a helpful AI engineering tutor."); // Default system prompt
     const [isDocManagementOpen, setIsDocManagementOpen] = useState(true);
+    const [selectedPresetId, setSelectedPresetId] = useState('custom');
 
-    // TODO: Fetch and manage document list state, pass to DocumentList & DocumentUpload
-    // TODO: Implement prompt management (save/load presets)
+    useEffect(() => {
+        const matchedPreset = PROMPT_PRESETS.find(p => p.text === systemPrompt);
+        setSelectedPresetId(matchedPreset ? matchedPreset.id : 'custom');
+    }, [systemPrompt]);
+
+    const handlePresetChange = (event) => {
+        const presetId = event.target.value;
+        setSelectedPresetId(presetId);
+        const selectedPreset = PROMPT_PRESETS.find(p => p.id === presetId);
+        if (selectedPreset) {
+            setSystemPrompt(selectedPreset.text);
+        }
+    };
+    
+    const [docListKey, setDocListKey] = useState(Date.now()); 
+    const handleUploadSuccess = () => { setDocListKey(Date.now()); };
 
     return (
         <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-3 px-1 pt-1">
+                <h2 className="text-sm font-semibold text-text-light dark:text-text-dark">Assistant Controls</h2>
+                <IconButton 
+                    icon={PanelLeftClose} 
+                    onClick={() => setIsLeftPanelOpen(false)} 
+                    title="Close Assistant Panel"
+                    variant="ghost"
+                    size="sm"
+                    className="text-text-muted-light dark:text-text-muted-dark hover:text-primary"
+                />
+            </div>
+
             {/* Custom Prompt Section */}
             <div className="mb-4">
                 <button 
                     onClick={() => setIsPromptSectionOpen(!isPromptSectionOpen)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md focus:outline-none"
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-left text-text-light dark:text-text-dark bg-surface-light dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none shadow-sm border border-border-light dark:border-border-dark"
                 >
-                    <span><Settings2 size={16} className="inline mr-2" /> Custom Prompt</span>
+                    <span className="flex items-center gap-2">
+                        {(PROMPT_PRESETS.find(p=>p.id === selectedPresetId)?.icon || Settings2)({ size: 16 })}
+                        Custom Prompt
+                    </span>
                     {isPromptSectionOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </button>
                 {isPromptSectionOpen && (
-                    <div className="mt-2 p-3 bg-surface-light dark:bg-surface-dark border border-gray-200 dark:border-gray-600 rounded-md animate-fadeIn">
-                        {/* Dropdown for prompt presets - To be implemented */}
+                    <motion.div 
+                        initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="mt-2 p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-md shadow-inner"
+                    >
+                        <label htmlFor="prompt-preset-select" className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                            Prompt Mode:
+                        </label>
+                        <select
+                            id="prompt-preset-select"
+                            value={selectedPresetId}
+                            onChange={handlePresetChange}
+                            className="input-field mb-2 text-xs py-1.5"
+                        >
+                            {PROMPT_PRESETS.map(preset => (
+                                <option key={preset.id} value={preset.id}>{preset.name}</option>
+                            ))}
+                        </select>
+                        
+                        <label htmlFor="system-prompt-area" className="block text-xs font-medium text-text-muted-light dark:text-text-muted-dark mb-1">
+                            System Prompt (Editable):
+                        </label>
                         <textarea
+                            id="system-prompt-area"
                             value={systemPrompt}
-                            onChange={(e) => setSystemPrompt(e.target.value)}
-                            rows="3"
-                            className="input-custom text-xs"
-                            placeholder="Enter system prompt (e.g., Act as an expert in thermodynamics...)"
+                            onChange={(e) => {
+                                setSystemPrompt(e.target.value);
+                                setSelectedPresetId('custom');
+                            }}
+                            rows="5"
+                            className="input-field text-xs custom-scrollbar"
+                            placeholder="Enter system prompt..."
                         />
-                        {/* Buttons for Save/Load prompt presets */}
-                    </div>
+                    </motion.div>
                 )}
             </div>
 
@@ -2827,30 +3648,33 @@ function LeftPanel() {
             <div className="flex-grow flex flex-col overflow-hidden">
                  <button 
                     onClick={() => setIsDocManagementOpen(!isDocManagementOpen)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md focus:outline-none mb-2"
+                    className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-left text-text-light dark:text-text-dark bg-surface-light dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none shadow-sm border border-border-light dark:border-border-dark mb-2"
                 >
-                    <span><FilePlus size={16} className="inline mr-2" /> Document Management</span>
+                    <span className="flex items-center gap-2"><FilePlus size={16} /> Document Management</span>
                     {isDocManagementOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                 </button>
                 {isDocManagementOpen && (
-                    <div className="flex-grow flex flex-col overflow-hidden animate-fadeIn">
-                        <DocumentUpload onUploadSuccess={() => { /* TODO: refresh doc list */ }} />
-                        <div className="mt-3 flex-grow overflow-y-auto">
-                             {/* SELECT DOCUMENT with filter dropdown - placeholder */}
-                            <div className="mb-2">
-                                <label htmlFor="doc-filter" className="text-xs text-text-muted-light dark:text-text-muted-dark">Filter documents:</label>
-                                <select id="doc-filter" className="input-custom input-custom text-xs mt-1">
-                                    <option value="all">All Documents</option>
-                                    <option value="pdf">PDFs</option>
-                                    {/* More filter options */}
-                                </select>
-                            </div>
-                            <DocumentList />
+                    <motion.div 
+                        initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex-grow flex flex-col overflow-hidden p-3 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-md shadow-inner"
+                    >
+                        <DocumentUpload onUploadSuccess={handleUploadSuccess} />
+                        <div className="mt-3 flex-grow overflow-y-auto custom-scrollbar">
+                            <label htmlFor="doc-filter" className="text-xs text-text-muted-light dark:text-text-muted-dark">Filter documents:</label>
+                             <select id="doc-filter" className="input-field text-xs mt-1 mb-2 py-1.5">
+                                <option value="all">All Documents</option>
+                                <option value="pdf">PDFs</option>
+                            </select>
+                            <DocumentList 
+                                key={docListKey}
+                                onSelectDocument={selectDocumentForAnalysis}
+                                selectedDocument={selectedDocumentForAnalysis}
+                            />
                         </div>
-                    </div>
+                    </motion.div>
                 )}
             </div>
-             {/* TODO: Document Preview Capabilities - complex, maybe a modal or dedicated view */}
         </div>
     );
 }
@@ -3012,38 +3836,175 @@ function LLMSelectionModal({ isOpen, onClose, currentLLM, onSelectLLM }) {
 export default LLMSelectionModal;
 ```
 
+`src/components/layout/RightCollapsedNav.jsx`
+
+```javascript
+// frontend/src/components/layout/RightCollapsedNav.jsx
+import React from 'react';
+import { useAppState } from '../../contexts/AppStateContext.jsx'; // Ensure .jsx
+import { HelpCircle, GitFork, Tags, ChevronLeft } from 'lucide-react';
+import IconButton from '../core/IconButton.jsx'; // Ensure .jsx
+import { motion } from 'framer-motion';
+
+const iconMap = {
+    faq: HelpCircle,
+    topics: Tags,
+    mindmap: GitFork,
+};
+
+function RightCollapsedNav() {
+    const { setIsRightPanelOpen } = useAppState();
+
+    const navItems = [
+        { id: 'faq', label: 'FAQ Generator', iconName: 'HelpCircle', action: () => { setIsRightPanelOpen(true); } },
+        { id: 'topics', label: 'Key Topics', iconName: 'Tags', action: () => { setIsRightPanelOpen(true); } },
+        { id: 'mindmap', label: 'Mind Map', iconName: 'GitFork', action: () => { setIsRightPanelOpen(true); } },
+    ];
+
+    return (
+        <motion.aside
+            key="right-collapsed-nav"
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: '0%', opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.2 }}
+            // Use fixed positioning
+            className="fixed right-0 top-16 bottom-0 z-30 w-14 sm:w-16 bg-surface-light dark:bg-surface-dark border-l border-border-light dark:border-border-dark shadow-md flex-col items-center py-4 space-y-3 custom-scrollbar hidden md:flex" // hidden on small screens, flex on md and up
+        >
+            {navItems.map(item => {
+                const Icon = iconMap[item.iconName] || HelpCircle; // Fallback icon
+                return (
+                    <IconButton 
+                        key={item.id}
+                        icon={Icon} // Pass the component directly
+                        onClick={item.action}
+                        title={item.label}
+                        ariaLabel={item.label}
+                        variant="ghost"
+                        size="md"
+                        className="text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-light"
+                    />
+                );
+            })}
+             <div className="mt-auto flex-grow flex items-end pb-2">
+                <IconButton 
+                    icon={ChevronLeft}
+                    onClick={() => setIsRightPanelOpen(true)}
+                    title="Open Analyzer Panel"
+                    ariaLabel="Open Analyzer Panel"
+                    variant="ghost"
+                    size="md"
+                    className="text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-light"
+                />
+            </div>
+        </motion.aside>
+    );
+}
+export default RightCollapsedNav;
+```
+
 `src/components/layout/RightPanel.jsx`
 
 ```javascript
+// import React, { useState } from 'react';
+// import AnalysisTool from '../analysis/AnalysisTool';
+// import { ChevronDown, ChevronUp, Telescope } from 'lucide-react'; // Example icons
+
+// function RightPanel() {
+//     const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(true);
+//     // TODO: Manage state for selected document for analysis, analysis results for each tool
+
+//     return (
+//         <div className="flex flex-col h-full">
+//             <button 
+//                 onClick={() => setIsAnalyzerOpen(!isAnalyzerOpen)}
+//                 className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md focus:outline-none mb-2"
+//             >
+//                 <span><Telescope size={16} className="inline mr-2" /> Advanced Analyzer</span>
+//                 {isAnalyzerOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+//             </button>
+
+//             {isAnalyzerOpen && (
+//                 <div className="flex-grow space-y-3 overflow-y-auto animate-fadeIn p-1">
+//                     {/* 
+//                         Here you'd pass the selected document from LeftPanel (or a global context) 
+//                         to each AnalysisTool instance. This requires more state management.
+//                         For simplicity, AnalysisTool will internally manage its state for now.
+//                     */}
+//                     <AnalysisTool toolType="faq" title="FAQ Generator" icon="HelpCircle" />
+//                     <AnalysisTool toolType="topics" title="Key Topics Extractor" icon="Tags" />
+//                     <AnalysisTool toolType="mindmap" title="Mind Map Creator" icon="GitFork" />
+//                 </div>
+//             )}
+//         </div>
+//     );
+// }
+// export default RightPanel;
+
+
+
+
+
+
+
+
+
+
+
+
+// frontend/src/components/layout/RightPanel.jsx
 import React, { useState } from 'react';
-import AnalysisTool from '../analysis/AnalysisTool';
-import { ChevronDown, ChevronUp, Telescope } from 'lucide-react'; // Example icons
+import { useAppState } from '../../contexts/AppStateContext';
+import AnalysisTool from '../analysis/AnalysisTool.jsx'; // Added .jsx
+import { PanelRightClose, ChevronDown, ChevronUp, Telescope } from 'lucide-react';
+import IconButton from '../core/IconButton.jsx'; // Added .jsx
+import { motion } from 'framer-motion';
 
 function RightPanel() {
+    const { setIsRightPanelOpen, selectedDocumentForAnalysis } = useAppState();
     const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(true);
-    // TODO: Manage state for selected document for analysis, analysis results for each tool
+
+    const currentSelectedDocFilename = selectedDocumentForAnalysis?.originalName || null;
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full p-3 sm:p-4 bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark custom-scrollbar">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-border-light dark:border-border-dark">
+                <h2 className="text-base font-semibold">Advanced Analyzer</h2>
+                <IconButton 
+                    icon={PanelRightClose} 
+                    onClick={() => setIsRightPanelOpen(false)} 
+                    title="Close Analyzer Panel"
+                    variant="ghost"
+                    size="sm"
+                    className="text-text-muted-light dark:text-text-muted-dark hover:text-primary dark:hover:text-primary-light"
+                />
+            </div>
+            
             <button 
                 onClick={() => setIsAnalyzerOpen(!isAnalyzerOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-left text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md focus:outline-none mb-2"
+                className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium text-left bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none shadow-sm border border-border-light dark:border-border-dark mb-3"
             >
-                <span><Telescope size={16} className="inline mr-2" /> Advanced Analyzer</span>
+                <span className="flex items-center gap-2"><Telescope size={16} /> Analysis Tools</span>
                 {isAnalyzerOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
             </button>
 
             {isAnalyzerOpen && (
-                <div className="flex-grow space-y-3 overflow-y-auto animate-fadeIn p-1">
-                    {/* 
-                        Here you'd pass the selected document from LeftPanel (or a global context) 
-                        to each AnalysisTool instance. This requires more state management.
-                        For simplicity, AnalysisTool will internally manage its state for now.
-                    */}
-                    <AnalysisTool toolType="faq" title="FAQ Generator" icon="HelpCircle" />
-                    <AnalysisTool toolType="topics" title="Key Topics Extractor" icon="Tags" />
-                    <AnalysisTool toolType="mindmap" title="Mind Map Creator" icon="GitFork" />
-                </div>
+                <motion.div 
+                    initial={{ height: 0, opacity: 0 }} 
+                    animate={{ height: 'auto', opacity: 1 }} 
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="flex-grow space-y-3 overflow-y-auto custom-scrollbar pr-1"
+                >
+                    {!currentSelectedDocFilename && (
+                        <div className="p-4 text-xs text-center text-text-muted-light dark:text-text-muted-dark bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-border-light dark:border-border-dark">
+                            <p>Select a document from the left panel to enable analysis tools.</p>
+                        </div>
+                    )}
+                    <AnalysisTool toolType="faq" title="FAQ Generator" iconName="HelpCircle" selectedDocumentFilename={currentSelectedDocFilename} />
+                    <AnalysisTool toolType="topics" title="Key Topics Extractor" iconName="Tags" selectedDocumentFilename={currentSelectedDocFilename} />
+                    <AnalysisTool toolType="mindmap" title="Mind Map Creator" iconName="GitFork" selectedDocumentFilename={currentSelectedDocFilename} />
+                </motion.div>
             )}
         </div>
     );
@@ -3171,61 +4132,181 @@ export default RightPanel;
 // }
 // export default TopNav;
 
+// import React, { useState } from 'react';
+// import { useAuth } from '../../hooks/useAuth';
+// import { useAppState } from '../../contexts/AppStateContext';
+// import ThemeToggle from '../common/ThemeToggle';
+// import LLMSelectionModal from './LLMSelectionModal';
+// import { 
+//     LogOut, User, MessageSquare, History as HistoryIcon, Settings, Cpu, Zap, ServerCrash, Server, 
+//     PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen, Menu // Lucide icons
+// } from 'lucide-react';
+// import toast from 'react-hot-toast'; // For placeholder actions
+
+// function TopNav({ onNewChat, onHistoryClick, orchestratorStatus }) {
+//     const { user, logout } = useAuth();
+//     const { 
+//         selectedLLM, switchLLM, 
+//         isLeftPanelOpen, setIsLeftPanelOpen,
+//         isRightPanelOpen, setIsRightPanelOpen
+//     } = useAppState();
+    
+//     const [isLLMModalOpen, setIsLLMModalOpen] = useState(false);
+    
+//     const getStatusIndicator = () => {
+//         if (!orchestratorStatus) return <div title="Status unavailable" className="w-4 h-4 bg-gray-400 rounded-full"></div>;
+//         if (orchestratorStatus.status === "ok") {
+//             return <Zap size={18} className="text-green-400 animate-pulse" title="Backend Online" />;
+//         } else if (orchestratorStatus.status === "loading") {
+//             return <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-yellow-400" title="Connecting..."></div>;
+//         } else {
+//             return <ServerCrash size={18} className="text-red-400" title={`Backend Offline: ${orchestratorStatus.message}`} />;
+//         }
+//     };
+
+//     return (
+//         <>
+//             <nav className="fixed top-0 left-0 right-0 z-40 bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 shadow-sm h-16 flex items-center justify-between px-2 sm:px-4">
+//                 {/* Left Side: Panel Toggle & Branding */}
+//                 <div className="flex items-center gap-2">
+//                     <button 
+//                         onClick={() => setIsLeftPanelOpen(prev => !prev)} 
+//                         className="p-2 rounded-md text-text-muted-light dark:text-text-muted-dark hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+//                         title={isLeftPanelOpen ? "Hide Assistant Panel" : "Show Assistant Panel"} 
+//                         aria-label="Toggle Assistant Panel"
+//                     >
+//                         {isLeftPanelOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+//                     </button>
+//                     <a href="/" className="flex items-center gap-1.5 sm:gap-2 text-lg sm:text-xl font-semibold text-text-light dark:text-text-dark">
+//                         <Server size={24} className="text-primary dark:text-primary-light" />
+//                         <span className="hidden sm:inline">AI Tutor</span>
+//                     </a>
+//                 </div>
+
+//                 {/* Center Controls - More adaptive */}
+//                 <div className="flex-1 flex justify-center px-2">
+//                     <div className="flex items-center gap-1 sm:gap-2">
+//                         <button
+//                             onClick={onNewChat}
+//                             className="flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+//                             title="Start a new chat session"
+//                         >
+//                             <MessageSquare size={14} /> <span className="hidden sm:inline">New Chat</span>
+//                         </button>
+//                         <button
+//                             onClick={onHistoryClick}
+//                             className="flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+//                             title="View chat history (Coming Soon)"
+//                         >
+//                             <HistoryIcon size={14} /> <span className="hidden sm:inline">History</span>
+//                         </button>
+//                         <button
+//                             onClick={() => setIsLLMModalOpen(true)}
+//                             className="flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+//                             title={`Switch LLM (Current: ${selectedLLM.toUpperCase()})`}
+//                         >
+//                             <Cpu size={14} /> <span className="hidden xs:inline">{selectedLLM.toUpperCase()}</span>
+//                         </button>
+//                     </div>
+//                 </div>
+
+
+//                 {/* Right Side: Status, Theme, User, Panel Toggle */}
+//                 <div className="flex items-center gap-1.5 sm:gap-2">
+//                     {getStatusIndicator()}
+//                     <ThemeToggle />
+//                     <div className="relative group">
+//                         <button className="p-1.5 bg-primary-light dark:bg-primary-dark text-white rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-primary">
+//                             <User size={18} />
+//                         </button>
+//                         <div className="absolute right-0 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-md shadow-lg py-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ease-in-out transform scale-95 group-hover:scale-100 focus-within:scale-100 origin-top-right invisible group-hover:visible focus-within:visible z-50">
+//                             <div className="px-4 py-2 text-sm text-text-light dark:text-text-dark border-b border-gray-200 dark:border-gray-600">
+//                                 Signed in as <br/><strong>{user?.username || 'User'}</strong>
+//                             </div>
+//                             <button
+//                                 onClick={() => toast.info("Profile settings coming soon!")}
+//                                 className="w-full text-left px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+//                             >
+//                                 <Settings size={16} /> Profile
+//                             </button>
+//                             <button
+//                                 onClick={logout}
+//                                 className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 flex items-center gap-2"
+//                             >
+//                                 <LogOut size={16} /> Logout
+//                             </button>
+//                         </div>
+//                     </div>
+//                     <button 
+//                         onClick={() => setIsRightPanelOpen(prev => !prev)} 
+//                         className="p-2 rounded-md text-text-muted-light dark:text-text-muted-dark hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+//                         title={isRightPanelOpen ? "Hide Analyzer Panel" : "Show Analyzer Panel"} 
+//                         aria-label="Toggle Analyzer Panel"
+//                     >
+//                         {isRightPanelOpen ? <PanelRightClose size={20} /> : <PanelRightOpen size={20} />}
+//                     </button>
+//                 </div>
+//             </nav>
+//             <LLMSelectionModal 
+//                 isOpen={isLLMModalOpen} 
+//                 onClose={() => setIsLLMModalOpen(false)} 
+//                 currentLLM={selectedLLM}
+//                 onSelectLLM={(llm) => { // This callback is passed to the modal
+//                     switchLLM(llm); // Update global state via AppStateContext
+//                     // The modal will also call its own API to save this preference
+//                     setIsLLMModalOpen(false);
+//                 }}
+//             />
+//         </>
+//     );
+// }
+// export default TopNav;
+
+
+
+
+
+
+
+
+
+
+
+
+// frontend/src/components/layout/TopNav.jsx
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAppState } from '../../contexts/AppStateContext';
-import ThemeToggle from '../common/ThemeToggle';
-import LLMSelectionModal from './LLMSelectionModal';
+import ThemeToggle from '../common/ThemeToggle.jsx';
+import LLMSelectionModal from './LLMSelectionModal.jsx';
 import { 
-    LogOut, User, MessageSquare, History as HistoryIcon, Settings, Cpu, Zap, ServerCrash, Server, 
-    PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen, Menu // Lucide icons
+    LogOut, User, MessageSquare, History as HistoryIcon, Settings, Cpu, Zap, ServerCrash, Server 
 } from 'lucide-react';
-import toast from 'react-hot-toast'; // For placeholder actions
+import toast from 'react-hot-toast';
 
 function TopNav({ onNewChat, onHistoryClick, orchestratorStatus }) {
     const { user, logout } = useAuth();
-    const { 
-        selectedLLM, switchLLM, 
-        isLeftPanelOpen, setIsLeftPanelOpen,
-        isRightPanelOpen, setIsRightPanelOpen
-    } = useAppState();
-    
+    const { selectedLLM, switchLLM } = useAppState(); // Panels are NOT controlled from here
     const [isLLMModalOpen, setIsLLMModalOpen] = useState(false);
     
-    const getStatusIndicator = () => {
-        if (!orchestratorStatus) return <div title="Status unavailable" className="w-4 h-4 bg-gray-400 rounded-full"></div>;
-        if (orchestratorStatus.status === "ok") {
-            return <Zap size={18} className="text-green-400 animate-pulse" title="Backend Online" />;
-        } else if (orchestratorStatus.status === "loading") {
-            return <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-yellow-400" title="Connecting..."></div>;
-        } else {
-            return <ServerCrash size={18} className="text-red-400" title={`Backend Offline: ${orchestratorStatus.message}`} />;
-        }
-    };
+    const getStatusIndicator = () => { /* ... as provided before ... */ };
 
     return (
         <>
-            <nav className="fixed top-0 left-0 right-0 z-40 bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 shadow-sm h-16 flex items-center justify-between px-2 sm:px-4">
-                {/* Left Side: Panel Toggle & Branding */}
+            <nav className="fixed top-0 left-0 right-0 z-40 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark shadow-sm h-16 flex items-center justify-between px-2 sm:px-4">
+                {/* Left Side: Branding (No panel toggle here) */}
                 <div className="flex items-center gap-2">
-                    <button 
-                        onClick={() => setIsLeftPanelOpen(prev => !prev)} 
-                        className="p-2 rounded-md text-text-muted-light dark:text-text-muted-dark hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
-                        title={isLeftPanelOpen ? "Hide Assistant Panel" : "Show Assistant Panel"} 
-                        aria-label="Toggle Assistant Panel"
-                    >
-                        {isLeftPanelOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
-                    </button>
                     <a href="/" className="flex items-center gap-1.5 sm:gap-2 text-lg sm:text-xl font-semibold text-text-light dark:text-text-dark">
                         <Server size={24} className="text-primary dark:text-primary-light" />
                         <span className="hidden sm:inline">AI Tutor</span>
                     </a>
                 </div>
 
-                {/* Center Controls - More adaptive */}
+                {/* Center Controls */}
                 <div className="flex-1 flex justify-center px-2">
                     <div className="flex items-center gap-1 sm:gap-2">
-                        <button
+                        {/* New Chat, History, LLM buttons as before */}
+                         <button
                             onClick={onNewChat}
                             className="flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                             title="Start a new chat session"
@@ -3235,7 +4316,7 @@ function TopNav({ onNewChat, onHistoryClick, orchestratorStatus }) {
                         <button
                             onClick={onHistoryClick}
                             className="flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md text-text-light dark:text-text-dark bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                            title="View chat history (Coming Soon)"
+                            title="View chat history"
                         >
                             <HistoryIcon size={14} /> <span className="hidden sm:inline">History</span>
                         </button>
@@ -3249,8 +4330,7 @@ function TopNav({ onNewChat, onHistoryClick, orchestratorStatus }) {
                     </div>
                 </div>
 
-
-                {/* Right Side: Status, Theme, User, Panel Toggle */}
+                {/* Right Side: Status, Theme, User (No panel toggle here) */}
                 <div className="flex items-center gap-1.5 sm:gap-2">
                     {getStatusIndicator()}
                     <ThemeToggle />
@@ -3258,8 +4338,9 @@ function TopNav({ onNewChat, onHistoryClick, orchestratorStatus }) {
                         <button className="p-1.5 bg-primary-light dark:bg-primary-dark text-white rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-light dark:focus:ring-offset-surface-dark focus:ring-primary">
                             <User size={18} />
                         </button>
+                        {/* User Dropdown Menu */}
                         <div className="absolute right-0 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-md shadow-lg py-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ease-in-out transform scale-95 group-hover:scale-100 focus-within:scale-100 origin-top-right invisible group-hover:visible focus-within:visible z-50">
-                            <div className="px-4 py-2 text-sm text-text-light dark:text-text-dark border-b border-gray-200 dark:border-gray-600">
+                            <div className="px-4 py-2 text-sm text-text-light dark:text-text-dark border-b border-border-light dark:border-border-dark">
                                 Signed in as <br/><strong>{user?.username || 'User'}</strong>
                             </div>
                             <button
@@ -3276,23 +4357,14 @@ function TopNav({ onNewChat, onHistoryClick, orchestratorStatus }) {
                             </button>
                         </div>
                     </div>
-                    <button 
-                        onClick={() => setIsRightPanelOpen(prev => !prev)} 
-                        className="p-2 rounded-md text-text-muted-light dark:text-text-muted-dark hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
-                        title={isRightPanelOpen ? "Hide Analyzer Panel" : "Show Analyzer Panel"} 
-                        aria-label="Toggle Analyzer Panel"
-                    >
-                        {isRightPanelOpen ? <PanelRightClose size={20} /> : <PanelRightOpen size={20} />}
-                    </button>
                 </div>
             </nav>
             <LLMSelectionModal 
                 isOpen={isLLMModalOpen} 
                 onClose={() => setIsLLMModalOpen(false)} 
                 currentLLM={selectedLLM}
-                onSelectLLM={(llm) => { // This callback is passed to the modal
-                    switchLLM(llm); // Update global state via AppStateContext
-                    // The modal will also call its own API to save this preference
+                onSelectLLM={(llm) => {
+                    switchLLM(llm);
                     setIsLLMModalOpen(false);
                 }}
             />
@@ -3300,6 +4372,9 @@ function TopNav({ onNewChat, onHistoryClick, orchestratorStatus }) {
     );
 }
 export default TopNav;
+
+
+
 ```
 
 `src/contexts/AppStateContext.jsx`
@@ -3391,49 +4466,360 @@ export default TopNav;
 // };
 // frontend/src/contexts/AppStateContext.jsx
 
+// import React, { createContext, useState, useContext, useEffect } from 'react';
+
+// export const AppStateContext = createContext(null); // Initialize with null
+
+// export const useAppState = () => { // Custom hook to use the AppStateContext
+//     const context = useContext(AppStateContext);
+//     if (context === undefined || context === null) { // Check if context is undefined or null
+//         throw new Error('useAppState must be used within an AppStateProvider');
+//     }
+//     return context;
+// };
+
+// const DEV_MODE_BYPASS_AUTH = true; // Ensure this matches other dev flags if used for initial state
+
+// export const AppStateProvider = ({ children }) => {
+//     const [theme, setThemeState] = useState(() => {
+//         const storedTheme = localStorage.getItem('theme');
+//         // Ensure theme is applied on initial load if not already on html tag
+//         if (storedTheme === 'dark') document.documentElement.classList.add('dark');
+//         else document.documentElement.classList.remove('dark');
+//         return storedTheme || 'dark';
+//     });
+//     const [selectedLLM, setSelectedLLM] = useState(localStorage.getItem('selectedLLM') || 'ollama');
+//     const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+//     const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+//     const [currentSessionId, setCurrentSessionIdState] = useState(
+//         DEV_MODE_BYPASS_AUTH
+//         ? 'dev-session-appstate-123' // Consistent dev session ID
+//         : localStorage.getItem('aiTutorSessionId') || null
+//     );
+//     // State for the selected document for analysis
+//     const [selectedDocumentForAnalysis, setSelectedDocumentForAnalysis] = useState(null);
+
+
+//     const toggleTheme = () => {
+//         setThemeState(prevTheme => {
+//             const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+//             localStorage.setItem('theme', newTheme);
+//             document.documentElement.classList.toggle('dark', newTheme === 'dark');
+//             // For Tailwind, class on <html> is usually enough.
+//             // If you have body-specific theme styles:
+//             // document.body.classList.remove(prevTheme);
+//             // document.body.classList.add(newTheme);
+//             return newTheme;
+//         });
+//     };
+    
+//     const switchLLM = (llm) => {
+//         setSelectedLLM(llm);
+//         localStorage.setItem('selectedLLM', llm);
+//     };
+
+//     const setSessionId = (sessionId) => {
+//         setCurrentSessionIdState(sessionId);
+//         if (DEV_MODE_BYPASS_AUTH && !sessionId && currentSessionId) {
+//              console.warn("DEV_MODE: Attempted to clear dev session ID. Retaining current dev session.");
+//              if(!currentSessionIdState) setCurrentSessionIdState('dev-session-appstate-123'); // Ensure it has a value
+//              return;
+//         }
+//         if (sessionId) {
+//             localStorage.setItem('aiTutorSessionId', sessionId);
+//         } else {
+//             localStorage.removeItem('aiTutorSessionId');
+//         }
+//     };
+
+//     const selectDocumentForAnalysis = (documentFile) => { // documentFile could be { originalName, serverFilename }
+//         setSelectedDocumentForAnalysis(documentFile);
+//     };
+
+//     // Apply theme to HTML element on initial load and when theme changes
+//      useEffect(() => {
+//         if (theme === 'dark') {
+//             document.documentElement.classList.add('dark');
+//         } else {
+//             document.documentElement.classList.remove('dark');
+//         }
+//     }, [theme]);
+
+
+//     return (
+//         <AppStateContext.Provider value={{
+//             theme, toggleTheme,
+//             selectedLLM, switchLLM,
+//             isLeftPanelOpen, setIsLeftPanelOpen,
+//             isRightPanelOpen, setIsRightPanelOpen,
+//             currentSessionId, setSessionId, // Use the wrapped setter
+//             selectedDocumentForAnalysis, selectDocumentForAnalysis
+//         }}>
+//             {children}
+//         </AppStateContext.Provider>
+//     );
+// };
+
+
+
+
+// // frontend/src/contexts/AppStateContext.jsx
+// import React, { createContext, useState, useContext, useEffect } from 'react';
+
+// export const AppStateContext = createContext(null);
+
+// export const useAppState = () => {
+//     const context = useContext(AppStateContext);
+//     if (!context) { // Simplified check, assuming context is not intentionally undefined after init
+//         throw new Error('useAppState must be used within an AppStateProvider');
+//     }
+//     return context;
+// };
+
+// // This flag is used to set an initial dev session ID if needed when Auth is also bypassed.
+// // For normal operation where AuthModal is shown, this particular flag's effect on session ID is less critical
+// // as the session ID will be set after login/devLogin.
+// const DEV_MODE_CONTEXT_INIT = true; 
+
+// export const AppStateProvider = ({ children }) => {
+//     const [theme, setThemeState] = useState(() => {
+//         const storedTheme = localStorage.getItem('theme') || 'dark';
+//         // Apply theme on initial load (client-side only)
+//         if (typeof window !== 'undefined') {
+//              if (storedTheme === 'dark') {
+//                 document.documentElement.classList.add('dark');
+//             } else {
+//                 document.documentElement.classList.remove('dark');
+//             }
+//         }
+//         return storedTheme;
+//     });
+
+//     const [selectedLLM, setSelectedLLM] = useState(localStorage.getItem('selectedLLM') || 'ollama');
+//     const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+//     const [isRightPanelOpen, setIsRightPanelOpen] = useState(true); // Default to true as per screenshot for desktop
+    
+//     const [currentSessionId, setCurrentSessionIdState] = useState(() => {
+//         if (DEV_MODE_CONTEXT_INIT && !localStorage.getItem('aiTutorSessionId')) {
+//             // Only set a dev session if no real session ID is found AND we are in a dev context init mode
+//             return 'dev-session-appstate-default';
+//         }
+//         return localStorage.getItem('aiTutorSessionId') || null;
+//     });
+
+//     const [systemPrompt, setSystemPromptState] = useState(
+//         localStorage.getItem('aiTutorSystemPrompt') || 
+//         "You are a helpful AI engineering tutor." // Default
+//     );
+//     const [selectedDocumentForAnalysis, setSelectedDocumentForAnalysisState] = useState(null); // Stores { originalName, serverFilename }
+
+//     const toggleTheme = () => {
+//         setThemeState(prevTheme => {
+//             const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+//             localStorage.setItem('theme', newTheme);
+//             // document.documentElement.classList.toggle('dark', newTheme === 'dark'); // useEffect handles this
+//             return newTheme;
+//         });
+//     };
+    
+//     const switchLLM = (llm) => {
+//         setSelectedLLM(llm);
+//         localStorage.setItem('selectedLLM', llm);
+//     };
+
+//     const setSessionId = (sessionId) => {
+//         setCurrentSessionIdState(sessionId);
+//         if (sessionId) {
+//             localStorage.setItem('aiTutorSessionId', sessionId);
+//         } else {
+//             // Only remove if not in a strict dev initial session mode, or handle carefully
+//             if (DEV_MODE_CONTEXT_INIT && sessionId === null && currentSessionId && currentSessionId.startsWith('dev-session')) {
+//                 console.warn("AppStateContext DEV_MODE: Attempt to clear dev session ID. Retaining.");
+//                 return; // Prevent clearing if it's a dev session and we want to keep it
+//             }
+//             localStorage.removeItem('aiTutorSessionId');
+//         }
+//     };
+
+//     const setSystemPrompt = (promptText) => {
+//         setSystemPromptState(promptText);
+//         localStorage.setItem('aiTutorSystemPrompt', promptText);
+//     };
+
+//     const selectDocumentForAnalysis = (documentFile) => { // documentFile is { originalName, serverFilename } or null
+//         setSelectedDocumentForAnalysisState(documentFile);
+//     };
+
+//     // Effect to apply theme class to HTML element when theme state changes
+//     useEffect(() => {
+//         if (typeof window !== 'undefined') {
+//             document.documentElement.classList.remove('light', 'dark'); // Clear previous
+//             document.documentElement.classList.add(theme); // Add current
+//         }
+//     }, [theme]);
+
+//     return (
+//         <AppStateContext.Provider value={{
+//             theme, toggleTheme,
+//             selectedLLM, switchLLM,
+//             isLeftPanelOpen, setIsLeftPanelOpen,
+//             isRightPanelOpen, setIsRightPanelOpen,
+//             currentSessionId, setSessionId, // Pass the state and its setter
+//             systemPrompt, setSystemPrompt,   // Pass systemPrompt and its setter
+//             selectedDocumentForAnalysis, selectDocumentForAnalysis // Pass selected doc and its setter
+//         }}>
+//             {children}
+//         </AppStateContext.Provider>
+//     );
+// };
+
+
+
+
+// // frontend/src/contexts/AppStateContext.jsx
+// import React, { createContext, useState, useContext, useEffect } from 'react';
+
+// export const AppStateContext = createContext(null);
+
+// export const useAppState = () => {
+//     const context = useContext(AppStateContext);
+//     if (!context) throw new Error('useAppState must be used within an AppStateProvider');
+//     return context;
+// };
+
+// // Default system prompt if nothing is stored
+// const defaultSystemPromptText = "You are a helpful AI engineering tutor.";
+
+// export const AppStateProvider = ({ children }) => {
+//     const [theme, setThemeState] = useState(() => localStorage.getItem('theme') || 'dark');
+//     const [selectedLLM, setSelectedLLM] = useState(localStorage.getItem('selectedLLM') || 'ollama');
+//     const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
+//     const [isRightPanelOpen, setIsRightPanelOpen] = useState(true); 
+//     const [currentSessionId, setCurrentSessionIdState] = useState(
+//         localStorage.getItem('aiTutorSessionId') || null
+//     );
+//     // --- New state for system prompt ---
+//     const [systemPrompt, setSystemPromptState] = useState(
+//         localStorage.getItem('aiTutorSystemPrompt') || defaultSystemPromptText
+//     );
+//     // --- End new state ---
+    
+//     const [selectedDocumentForAnalysis, setSelectedDocumentForAnalysisState] = useState(null);
+
+//     const toggleTheme = () => {
+//         setThemeState(prevTheme => {
+//             const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+//             localStorage.setItem('theme', newTheme);
+//             return newTheme;
+//         });
+//     };
+    
+//     const switchLLM = (llm) => {
+//         setSelectedLLM(llm);
+//         localStorage.setItem('selectedLLM', llm);
+//     };
+
+//     const setSessionId = (sessionId) => {
+//         setCurrentSessionIdState(sessionId);
+//         if (sessionId) localStorage.setItem('aiTutorSessionId', sessionId);
+//         else localStorage.removeItem('aiTutorSessionId');
+//     };
+
+//     // --- New setter for system prompt ---
+//     const setSystemPrompt = (promptText) => {
+//         setSystemPromptState(promptText);
+//         if (promptText) {
+//             localStorage.setItem('aiTutorSystemPrompt', promptText);
+//         } else {
+//             localStorage.removeItem('aiTutorSystemPrompt'); // Or set to default
+//             setSystemPromptState(defaultSystemPromptText); // Reset to default if cleared
+//         }
+//     };
+//     // --- End new setter ---
+
+//     const selectDocumentForAnalysis = (documentFile) => {
+//         setSelectedDocumentForAnalysisState(documentFile);
+//     };
+
+//     useEffect(() => {
+//         document.documentElement.classList.remove('light', 'dark');
+//         document.documentElement.classList.add(theme);
+//     }, [theme]);
+
+//     return (
+//         <AppStateContext.Provider value={{
+//             theme, toggleTheme,
+//             selectedLLM, switchLLM,
+//             isLeftPanelOpen, setIsLeftPanelOpen,
+//             isRightPanelOpen, setIsRightPanelOpen,
+//             currentSessionId, setSessionId,
+//             // --- Provide systemPrompt and setter ---
+//             systemPrompt, setSystemPrompt, 
+//             // --- End provide ---
+//             selectedDocumentForAnalysis, selectDocumentForAnalysis
+//         }}>
+//             {children}
+//         </AppStateContext.Provider>
+//     );
+// };
+
+
+
+
+// frontend/src/contexts/AppStateContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
-export const AppStateContext = createContext(null); // Initialize with null
+// 1. Create the Context (named export)
+export const AppStateContext = createContext(null);
 
-export const useAppState = () => { // Custom hook to use the AppStateContext
+// 2. Create and Export the Custom Hook (named export)
+export const useAppState = () => {
     const context = useContext(AppStateContext);
-    if (context === undefined || context === null) { // Check if context is undefined or null
-        throw new Error('useAppState must be used within an AppStateProvider');
+    if (context === undefined || context === null) {
+        throw new Error('useAppState must be used within an AppStateProvider. Make sure your component is wrapped by AppStateProvider in main.jsx or App.jsx.');
     }
     return context;
 };
 
-const DEV_MODE_BYPASS_AUTH = true; // Ensure this matches other dev flags if used for initial state
+// This can be a local constant if only used here for initial state logic
+const DEV_MODE_APPSTATE_INIT_SESSION = true; 
 
+// 3. Create and Export the Provider Component (named export)
 export const AppStateProvider = ({ children }) => {
     const [theme, setThemeState] = useState(() => {
-        const storedTheme = localStorage.getItem('theme');
-        // Ensure theme is applied on initial load if not already on html tag
-        if (storedTheme === 'dark') document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
-        return storedTheme || 'dark';
+        const storedTheme = localStorage.getItem('theme') || 'dark';
+        if (typeof window !== 'undefined') {
+             if (storedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+        return storedTheme;
     });
+
     const [selectedLLM, setSelectedLLM] = useState(localStorage.getItem('selectedLLM') || 'ollama');
     const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
-    const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
-    const [currentSessionId, setCurrentSessionIdState] = useState(
-        DEV_MODE_BYPASS_AUTH
-        ? 'dev-session-appstate-123' // Consistent dev session ID
-        : localStorage.getItem('aiTutorSessionId') || null
+    const [isRightPanelOpen, setIsRightPanelOpen] = useState(true); 
+    
+    const [currentSessionId, setCurrentSessionIdState] = useState(() => {
+        const storedSession = localStorage.getItem('aiTutorSessionId');
+        if (storedSession) return storedSession;
+        if (DEV_MODE_APPSTATE_INIT_SESSION) return 'dev-initial-session-appstate';
+        return null;
+    });
+    
+    const [systemPrompt, setSystemPromptState] = useState(
+        localStorage.getItem('aiTutorSystemPrompt') || 
+        "You are a helpful AI engineering tutor."
     );
-    // State for the selected document for analysis
-    const [selectedDocumentForAnalysis, setSelectedDocumentForAnalysis] = useState(null);
-
+    
+    const [selectedDocumentForAnalysis, setSelectedDocumentForAnalysisState] = useState(null);
 
     const toggleTheme = () => {
         setThemeState(prevTheme => {
             const newTheme = prevTheme === 'light' ? 'dark' : 'light';
             localStorage.setItem('theme', newTheme);
-            document.documentElement.classList.toggle('dark', newTheme === 'dark');
-            // For Tailwind, class on <html> is usually enough.
-            // If you have body-specific theme styles:
-            // document.body.classList.remove(prevTheme);
-            // document.body.classList.add(newTheme);
             return newTheme;
         });
     };
@@ -3445,240 +4831,75 @@ export const AppStateProvider = ({ children }) => {
 
     const setSessionId = (sessionId) => {
         setCurrentSessionIdState(sessionId);
-        if (DEV_MODE_BYPASS_AUTH && !sessionId && currentSessionId) {
-             console.warn("DEV_MODE: Attempted to clear dev session ID. Retaining current dev session.");
-             if(!currentSessionIdState) setCurrentSessionIdState('dev-session-appstate-123'); // Ensure it has a value
-             return;
-        }
         if (sessionId) {
             localStorage.setItem('aiTutorSessionId', sessionId);
         } else {
+            // Conditional logic for dev mode if needed, otherwise just remove
+            if (DEV_MODE_APPSTATE_INIT_SESSION && currentSessionId && currentSessionId.startsWith('dev-')) {
+                console.warn("AppStateContext DEV_MODE: Attempt to clear dev session ID. Retaining.");
+                return; 
+            }
             localStorage.removeItem('aiTutorSessionId');
         }
     };
 
-    const selectDocumentForAnalysis = (documentFile) => { // documentFile could be { originalName, serverFilename }
-        setSelectedDocumentForAnalysis(documentFile);
+    const setSystemPrompt = (promptText) => {
+        setSystemPromptState(promptText);
+        localStorage.setItem('aiTutorSystemPrompt', promptText);
     };
 
-    // Apply theme to HTML element on initial load and when theme changes
-     useEffect(() => {
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
+    const selectDocumentForAnalysis = (documentFile) => {
+        setSelectedDocumentForAnalysisState(documentFile);
+    };
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            document.documentElement.classList.remove('light', 'dark');
+            document.documentElement.classList.add(theme);
         }
     }, [theme]);
 
+    const contextValue = {
+        theme, toggleTheme,
+        selectedLLM, switchLLM,
+        isLeftPanelOpen, setIsLeftPanelOpen,
+        isRightPanelOpen, setIsRightPanelOpen,
+        currentSessionId, setSessionId,
+        systemPrompt, setSystemPrompt,
+        selectedDocumentForAnalysis, selectDocumentForAnalysis
+    };
 
     return (
-        <AppStateContext.Provider value={{
-            theme, toggleTheme,
-            selectedLLM, switchLLM,
-            isLeftPanelOpen, setIsLeftPanelOpen,
-            isRightPanelOpen, setIsRightPanelOpen,
-            currentSessionId, setSessionId, // Use the wrapped setter
-            selectedDocumentForAnalysis, selectDocumentForAnalysis
-        }}>
+        <AppStateContext.Provider value={contextValue}>
             {children}
         </AppStateContext.Provider>
     );
 };
+
+// NO DEFAULT EXPORT if all are named exports used elsewhere
+// If you had a default export, it would be like:
+// export default SomePrimaryComponentOrObject;
 ```
 
 `src/contexts/AuthContext.jsx`
 
 ```javascript
-// import React, { createContext, useState, useEffect, useCallback } from 'react';
-// import api from '../services/api';
-// import { jwtDecode } from 'jwt-decode'; // npm install jwt-decode
-
-// export const AuthContext = createContext(null);
-
-// export const AuthProvider = ({ children }) => {
-//     const [token, setToken] = useState(localStorage.getItem('authToken'));
-//     const [user, setUser] = useState(null); // { id, username, llmProvider, apiKey }
-//     const [loading, setLoading] = useState(true); // Initial auth check
-
-//     const parseToken = useCallback((tok) => {
-//         if (!tok) return null;
-//         try {
-//             const decoded = jwtDecode(tok); // Ensure your JWT has these fields
-//             return { id: decoded.id, username: decoded.username }; // Add other fields if present
-//         } catch (e) {
-//             console.error("Failed to decode token:", e);
-//             localStorage.removeItem('authToken');
-//             return null;
-//         }
-//     }, []);
-
-//     useEffect(() => {
-//         const storedToken = localStorage.getItem('authToken');
-//         if (storedToken) {
-//             const decodedUser = parseToken(storedToken);
-//             if (decodedUser) {
-//                 setUser(decodedUser);
-//                 setToken(storedToken);
-//                 api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`; // For axios global config
-//             } else {
-//                 // Invalid token found
-//                 localStorage.removeItem('authToken');
-//             }
-//         }
-//         setLoading(false);
-//     }, [parseToken]);
-
-//     const login = async (credentials) => {
-//         try {
-//             const data = await api.login(credentials); // API should return { token, userDetails, sessionId }
-//             localStorage.setItem('authToken', data.token);
-//             const decodedUser = parseToken(data.token);
-//             setUser(decodedUser);
-//             setToken(data.token);
-//             api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-//             return data; // Pass along sessionId, etc.
-//         } catch (error) {
-//             console.error("Login failed:", error);
-//             throw error;
-//         }
-//     };
-    
-//     const signup = async (signupData) => { // signupData includes username, password, llmProvider, apiKey (optional)
-//         try {
-//             // The actual API key storage should be handled securely by the backend.
-//             // Frontend might only send it during initial signup or LLM config update.
-//             // The backend then encrypts and stores it, never sending it back.
-//             const data = await api.signup(signupData); // API handles user creation
-//              // After signup, typically auto-login or prompt to login
-//             // For now, let's assume signup returns token like login for immediate use
-//             if(data.token) {
-//                 localStorage.setItem('authToken', data.token);
-//                 const decodedUser = parseToken(data.token);
-//                 setUser(decodedUser);
-//                 setToken(data.token);
-//                 api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-//             }
-//             return data;
-//         } catch (error) {
-//             console.error("Signup failed:", error);
-//             throw error;
-//         }
-//     };
-
-//     const logout = () => {
-//         localStorage.removeItem('authToken');
-//         setUser(null);
-//         setToken(null);
-//         delete api.defaults.headers.common['Authorization'];
-//     };
-
-//     return (
-//         <AuthContext.Provider value={{ token, user, loading, login, signup, logout, setUser, setToken }}>
-//             {children}
-//         </AuthContext.Provider>
-//     );
-// };
-
-// import React, { createContext, useState, useEffect, useCallback } from 'react';
-// // import api from '../services/api'; // We'll mock API calls for now
-// // import { jwtDecode } from 'jwt-decode';
-
-// export const AuthContext = createContext(null);
-
-// const DEV_MODE_BYPASS_AUTH = true; // <--- SET THIS TO true FOR BYPASS
-
-// export const AuthProvider = ({ children }) => {
-//     const [token, setToken] = useState(DEV_MODE_BYPASS_AUTH ? 'fake-dev-token' : localStorage.getItem('authToken'));
-//     const [user, setUser] = useState(
-//         DEV_MODE_BYPASS_AUTH 
-//         ? { id: 'devUser123', username: 'DevUser' } 
-//         : null
-//     );
-//     const [loading, setLoading] = useState(false); // Set to false if bypassing initial auth check
-
-//     // Original parseToken and useEffect for real auth can be kept but won't run if DEV_MODE_BYPASS_AUTH is true
-//     const parseToken = useCallback((tok) => { /* ... original code ... */ }, []);
-//     useEffect(() => {
-//         if (DEV_MODE_BYPASS_AUTH) {
-//             setLoading(false); // Already set user and token
-//             return;
-//         }
-//         // ... original useEffect logic for real auth ...
-//         setLoading(false); // Ensure loading is set to false after check
-//     }, [parseToken]);
-
-
-//     const login = async (credentials) => {
-//         if (DEV_MODE_BYPASS_AUTH) {
-//             console.log("DEV_MODE: Bypassing real login.", credentials);
-//             const fakeUserData = { id: 'devUser123', username: credentials.username || 'DevUser' };
-//             setUser(fakeUserData);
-//             setToken('fake-dev-token');
-//             return { token: 'fake-dev-token', userDetails: fakeUserData, sessionId: 'dev-session-123' };
-//         }
-//         // ... original login logic using api.login ...
-//     };
-    
-//     const signup = async (signupData) => {
-//          if (DEV_MODE_BYPASS_AUTH) {
-//             console.log("DEV_MODE: Bypassing real signup.", signupData);
-//             const fakeUserData = { id: 'devUserSignup123', username: signupData.username || 'NewDevUser' };
-//             setUser(fakeUserData);
-//             setToken('fake-dev-signup-token');
-//             // In dev mode, simulate setting the LLM from signup
-//             // This would normally be handled by AppStateContext or through API
-//             // const { switchLLM } = useAppState(); // Can't use hook here
-//             // if (signupData.llmProvider) { /* update global state somehow or ignore for now */ }
-//             return { token: 'fake-dev-signup-token', userDetails: fakeUserData, sessionId: 'dev-session-signup-123' };
-//         }
-//         // ... original signup logic using api.signup ...
-//     };
-
-//     const logout = () => {
-//         if (DEV_MODE_BYPASS_AUTH) {
-//             // To test the logout flow even in dev mode, you might want to clear the fake state
-//             // For now, let's keep it simple: to "logout" in dev, you'd set DEV_MODE_BYPASS_AUTH to false and refresh
-//             // or implement a dev-mode specific logout:
-//             // setUser(null);
-//             // setToken(null);
-//             // console.log("DEV_MODE: Simulated logout. Refresh or set DEV_MODE_BYPASS_AUTH=false to see AuthModal.");
-//             // Or, for a more realistic test of the logout flow:
-//             localStorage.removeItem('authToken'); // Still good to remove if it was set
-//             setUser(null);
-//             setToken(null);
-//             // No API call for logout in this simplified bypass
-//             return;
-//         }
-//         // ... original logout logic ...
-//     };
-
-//     return (
-//         <AuthContext.Provider value={{ token, user, loading, login, signup, logout, setUser, setToken }}>
-//             {children}
-//         </AuthContext.Provider>
-//     );
-// };
-
-
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import api from '../services/api'; // We'll still use the mock or real API
-import { jwtDecode } from 'jwt-decode';
+import api from '../services/api';
+import { jwtDecode } from 'jwt-decode'; // npm install jwt-decode
 
 export const AuthContext = createContext(null);
 
-export const DEV_MODE_ALLOW_DEV_LOGIN = true; // New flag: Allows a special "Dev Login" button
-// const DEV_MODE_BYPASS_AUTH = false; // We are no longer fully bypassing, so this might be false or removed
-
 export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(localStorage.getItem('authToken'));
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null); // { id, username, llmProvider, apiKey }
+    const [loading, setLoading] = useState(true); // Initial auth check
 
     const parseToken = useCallback((tok) => {
         if (!tok) return null;
         try {
-            const decoded = jwtDecode(tok);
-            return { id: decoded.id, username: decoded.username };
+            const decoded = jwtDecode(tok); // Ensure your JWT has these fields
+            return { id: decoded.id, username: decoded.username }; // Add other fields if present
         } catch (e) {
             console.error("Failed to decode token:", e);
             localStorage.removeItem('authToken');
@@ -3693,39 +4914,44 @@ export const AuthProvider = ({ children }) => {
             if (decodedUser) {
                 setUser(decodedUser);
                 setToken(storedToken);
-                // If using axios global config for token:
-                // apiClient.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+                api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`; // For axios global config
+            } else {
+                // Invalid token found
+                localStorage.removeItem('authToken');
             }
         }
         setLoading(false);
     }, [parseToken]);
 
     const login = async (credentials) => {
-        // Real login logic (or mock if api.js is in mock mode)
         try {
-            const data = await api.login(credentials); 
+            const data = await api.login(credentials); // API should return { token, userDetails, sessionId }
             localStorage.setItem('authToken', data.token);
             const decodedUser = parseToken(data.token);
             setUser(decodedUser);
             setToken(data.token);
-            // if (apiClient) apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-            return data; 
+            api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+            return data; // Pass along sessionId, etc.
         } catch (error) {
             console.error("Login failed:", error);
             throw error;
         }
     };
     
-    const signup = async (signupData) => {
-        // Real signup logic (or mock)
+    const signup = async (signupData) => { // signupData includes username, password, llmProvider, apiKey (optional)
         try {
-            const data = await api.signup(signupData);
-            if(data.token) { // Assuming signup also returns a token for auto-login
+            // The actual API key storage should be handled securely by the backend.
+            // Frontend might only send it during initial signup or LLM config update.
+            // The backend then encrypts and stores it, never sending it back.
+            const data = await api.signup(signupData); // API handles user creation
+             // After signup, typically auto-login or prompt to login
+            // For now, let's assume signup returns token like login for immediate use
+            if(data.token) {
                 localStorage.setItem('authToken', data.token);
                 const decodedUser = parseToken(data.token);
                 setUser(decodedUser);
                 setToken(data.token);
-                // if (apiClient) apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+                api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
             }
             return data;
         } catch (error) {
@@ -3738,32 +4964,205 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('authToken');
         setUser(null);
         setToken(null);
-        // if (apiClient) delete apiClient.defaults.headers.common['Authorization'];
-        // Also clear session from AppStateContext if needed, usually done in App.jsx's logout handler
+        delete api.defaults.headers.common['Authorization'];
     };
-
-    // Special function for Dev Login button
-    const devLogin = () => {
-        if (DEV_MODE_ALLOW_DEV_LOGIN) {
-            const devToken = 'fake-dev-token-for-button';
-            const devUser = { id: 'devUserFromButton', username: 'DevButtonUser' };
-            localStorage.setItem('authToken', devToken);
-            setUser(devUser);
-            setToken(devToken);
-            // if (apiClient) apiClient.defaults.headers.common['Authorization'] = `Bearer ${devToken}`;
-            console.log("DEV_MODE: Logged in as DevButtonUser");
-            return { token: devToken, username: devUser.username, _id: devUser.id, sessionId: 'dev-session-from-button' };
-        }
-        return null;
-    };
-
 
     return (
-        <AuthContext.Provider value={{ token, user, loading, login, signup, logout, devLogin, setUser, setToken, DEV_MODE_ALLOW_DEV_LOGIN }}>
+        <AuthContext.Provider value={{ token, user, loading, login, signup, logout, setUser, setToken }}>
             {children}
         </AuthContext.Provider>
     );
 };
+
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+// import api from '../services/api'; // We'll mock API calls for now
+// import { jwtDecode } from 'jwt-decode';
+
+export const AuthContext = createContext(null);
+
+const DEV_MODE_BYPASS_AUTH = true; // <--- SET THIS TO true FOR BYPASS
+
+export const AuthProvider = ({ children }) => {
+    const [token, setToken] = useState(DEV_MODE_BYPASS_AUTH ? 'fake-dev-token' : localStorage.getItem('authToken'));
+    const [user, setUser] = useState(
+        DEV_MODE_BYPASS_AUTH 
+        ? { id: 'devUser123', username: 'DevUser' } 
+        : null
+    );
+    const [loading, setLoading] = useState(false); // Set to false if bypassing initial auth check
+
+    // Original parseToken and useEffect for real auth can be kept but won't run if DEV_MODE_BYPASS_AUTH is true
+    const parseToken = useCallback((tok) => { /* ... original code ... */ }, []);
+    useEffect(() => {
+        if (DEV_MODE_BYPASS_AUTH) {
+            setLoading(false); // Already set user and token
+            return;
+        }
+        // ... original useEffect logic for real auth ...
+        setLoading(false); // Ensure loading is set to false after check
+    }, [parseToken]);
+
+
+    const login = async (credentials) => {
+        if (DEV_MODE_BYPASS_AUTH) {
+            console.log("DEV_MODE: Bypassing real login.", credentials);
+            const fakeUserData = { id: 'devUser123', username: credentials.username || 'DevUser' };
+            setUser(fakeUserData);
+            setToken('fake-dev-token');
+            return { token: 'fake-dev-token', userDetails: fakeUserData, sessionId: 'dev-session-123' };
+        }
+        // ... original login logic using api.login ...
+    };
+    
+    const signup = async (signupData) => {
+         if (DEV_MODE_BYPASS_AUTH) {
+            console.log("DEV_MODE: Bypassing real signup.", signupData);
+            const fakeUserData = { id: 'devUserSignup123', username: signupData.username || 'NewDevUser' };
+            setUser(fakeUserData);
+            setToken('fake-dev-signup-token');
+            // In dev mode, simulate setting the LLM from signup
+            // This would normally be handled by AppStateContext or through API
+            // const { switchLLM } = useAppState(); // Can't use hook here
+            // if (signupData.llmProvider) { /* update global state somehow or ignore for now */ }
+            return { token: 'fake-dev-signup-token', userDetails: fakeUserData, sessionId: 'dev-session-signup-123' };
+        }
+        // ... original signup logic using api.signup ...
+    };
+
+    const logout = () => {
+        if (DEV_MODE_BYPASS_AUTH) {
+            // To test the logout flow even in dev mode, you might want to clear the fake state
+            // For now, let's keep it simple: to "logout" in dev, you'd set DEV_MODE_BYPASS_AUTH to false and refresh
+            // or implement a dev-mode specific logout:
+            // setUser(null);
+            // setToken(null);
+            // console.log("DEV_MODE: Simulated logout. Refresh or set DEV_MODE_BYPASS_AUTH=false to see AuthModal.");
+            // Or, for a more realistic test of the logout flow:
+            localStorage.removeItem('authToken'); // Still good to remove if it was set
+            setUser(null);
+            setToken(null);
+            // No API call for logout in this simplified bypass
+            return;
+        }
+        // ... original logout logic ...
+    };
+
+    return (
+        <AuthContext.Provider value={{ token, user, loading, login, signup, logout, setUser, setToken }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+
+// import React, { createContext, useState, useEffect, useCallback } from 'react';
+// import api from '../services/api'; // We'll still use the mock or real API
+// import { jwtDecode } from 'jwt-decode';
+
+// export const AuthContext = createContext(null);
+
+// export const DEV_MODE_ALLOW_DEV_LOGIN = true; // New flag: Allows a special "Dev Login" button
+// // const DEV_MODE_BYPASS_AUTH = false; // We are no longer fully bypassing, so this might be false or removed
+
+// export const AuthProvider = ({ children }) => {
+//     const [token, setToken] = useState(localStorage.getItem('authToken'));
+//     const [user, setUser] = useState(null);
+//     const [loading, setLoading] = useState(true);
+
+//     const parseToken = useCallback((tok) => {
+//         if (!tok) return null;
+//         try {
+//             const decoded = jwtDecode(tok);
+//             return { id: decoded.id, username: decoded.username };
+//         } catch (e) {
+//             console.error("Failed to decode token:", e);
+//             localStorage.removeItem('authToken');
+//             return null;
+//         }
+//     }, []);
+
+//     useEffect(() => {
+//         const storedToken = localStorage.getItem('authToken');
+//         if (storedToken) {
+//             const decodedUser = parseToken(storedToken);
+//             if (decodedUser) {
+//                 setUser(decodedUser);
+//                 setToken(storedToken);
+//                 // If using axios global config for token:
+//                 // apiClient.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+//             }
+//         }
+//         setLoading(false);
+//     }, [parseToken]);
+
+//     const login = async (credentials) => {
+//         // Real login logic (or mock if api.js is in mock mode)
+//         try {
+//             const data = await api.login(credentials); 
+//             localStorage.setItem('authToken', data.token);
+//             const decodedUser = parseToken(data.token);
+//             setUser(decodedUser);
+//             setToken(data.token);
+//             // if (apiClient) apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+//             return data; 
+//         } catch (error) {
+//             console.error("Login failed:", error);
+//             throw error;
+//         }
+//     };
+    
+//     const signup = async (signupData) => {
+//         // Real signup logic (or mock)
+//         try {
+//             const data = await api.signup(signupData);
+//             if(data.token) { // Assuming signup also returns a token for auto-login
+//                 localStorage.setItem('authToken', data.token);
+//                 const decodedUser = parseToken(data.token);
+//                 setUser(decodedUser);
+//                 setToken(data.token);
+//                 // if (apiClient) apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+//             }
+//             return data;
+//         } catch (error) {
+//             console.error("Signup failed:", error);
+//             throw error;
+//         }
+//     };
+
+//     const logout = () => {
+//         localStorage.removeItem('authToken');
+//         setUser(null);
+//         setToken(null);
+//         // if (apiClient) delete apiClient.defaults.headers.common['Authorization'];
+//         // Also clear session from AppStateContext if needed, usually done in App.jsx's logout handler
+//     };
+
+//     // Special function for Dev Login button
+//     const devLogin = () => {
+//         if (DEV_MODE_ALLOW_DEV_LOGIN) {
+//             const devToken = 'fake-dev-token-for-button';
+//             const devUser = { id: 'devUserFromButton', username: 'DevButtonUser' };
+//             localStorage.setItem('authToken', devToken);
+//             setUser(devUser);
+//             setToken(devToken);
+//             // if (apiClient) apiClient.defaults.headers.common['Authorization'] = `Bearer ${devToken}`;
+//             console.log("DEV_MODE: Logged in as DevButtonUser");
+//             return { token: devToken, username: devUser.username, _id: devUser.id, sessionId: 'dev-session-from-button' };
+//         }
+//         return null;
+//     };
+
+
+//     return (
+//         <AuthContext.Provider value={{ token, user, loading, login, signup, logout, devLogin, setUser, setToken, DEV_MODE_ALLOW_DEV_LOGIN }}>
+//             {children}
+//         </AuthContext.Provider>
+//     );
+// };
+
+
+
+
 ```
 
 `src/hooks/useAuth.jsx`
@@ -3784,11 +5183,23 @@ export const useAuth = () => {
 `src/hooks/useTheme.js`
 
 ```javascript
+// import { useContext } from 'react';
+// import { AppStateContext } from '../contexts/AppStateContext'; // Assuming theme is in AppStateContext
+
+// export const useTheme = () => {
+//     const context = useContext(AppStateContext);
+//     if (!context) {
+//         throw new Error('useTheme must be used within an AppStateProvider');
+//     }
+//     return { theme: context.theme, toggleTheme: context.toggleTheme };
+// };
+
+
 import { useContext } from 'react';
-import { AppStateContext } from '../contexts/AppStateContext'; // Assuming theme is in AppStateContext
+import { AppStateContext } from '../contexts/AppStateContext.jsx'; // Correct named import for the context object
 
 export const useTheme = () => {
-    const context = useContext(AppStateContext);
+    const context = useContext(AppStateContext); // Use the imported context object
     if (!context) {
         throw new Error('useTheme must be used within an AppStateProvider');
     }
@@ -3952,6 +5363,7 @@ body {
 // )
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { useAppState } from './contexts/AppStateContext.jsx'; // Correct named import
 import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import { AppStateProvider } from './contexts/AppStateContext.jsx'
@@ -4098,279 +5510,415 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // export default api;
 // // Also export the apiClient instance if you need to use it directly sometimes
 // export { apiClient };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// import axios from 'axios';
+
+// const DEV_MODE_MOCK_API = true; // Set this to true or false as needed
+
+// // --- Define apiClient at the top level ---
+// const apiClient = axios.create({
+//     baseURL: import.meta.env.VITE_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api',
+//     headers: {
+//         'Content-Type': 'application/json',
+//     }
+// });
+
+// // Add a request interceptor to include the token (if not in dev mode or if real calls are made in dev mode)
+// if (!DEV_MODE_MOCK_API) { // Or adjust this logic if some dev calls are real
+//     apiClient.interceptors.request.use(config => {
+//         const token = localStorage.getItem('authToken');
+//         if (token) {
+//             config.headers.Authorization = `Bearer ${token}`;
+//         }
+//         return config;
+//     }, error => {
+//         return Promise.reject(error);
+//     });
+// }
+// // If you want the interceptor to always run, even for potential real calls during dev mode, move it outside the if.
+// // For purely mocked API, the interceptor might not be strictly necessary.
+// // However, it's good practice to have it for when DEV_MODE_MOCK_API is false.
+// // Let's make it always active for consistency when switching modes:
+// apiClient.interceptors.request.use(config => {
+//     if (DEV_MODE_MOCK_API && config.url.startsWith(apiClient.defaults.baseURL)) {
+//         // If mocking and it's a call to our base URL, we might not need the token.
+//         // However, if some mock functions call the real apiClient, token might be needed.
+//         // For simplicity with full mocking, let's assume token isn't added for mock calls.
+//         // BUT, if you have a mix, you'd need more nuanced logic.
+//         // Given our setup, the mock functions DON'T use apiClient directly.
+//         // So this interceptor will only apply when DEV_MODE_MOCK_API is false.
+//     }
+//     const token = localStorage.getItem('authToken');
+//     if (token) {
+//         config.headers.Authorization = `Bearer ${token}`;
+//     }
+//     return config;
+// }, error => {
+//     return Promise.reject(error);
+// });
+
+
+// const mockDelay = (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
+
+// const api = {
+//     login: async (credentials) => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay();
+//             console.log("MOCK API: login", credentials);
+//             if (credentials.username === "test" && credentials.password === "password") { // Example mock credentials
+//                 return { token: 'mock-token-xyz', username: 'TestUser', _id: 'testuser123', sessionId: 'mock-session-123' };
+//             } else if (credentials.username === "DevUser" && credentials.password === "devpass") { // For the AuthContext bypass
+//                  return { token: 'fake-dev-token', username: 'DevUser', _id: 'devUser123', sessionId: 'dev-session-123' };
+//             }
+//             // Simulate a failure for other credentials if needed for testing UI
+//             throw new Error("Invalid mock credentials");
+//         }
+//         // Real API call
+//         const response = await apiClient.post('/auth/signin', credentials);
+//         return response.data;
+//     },
+//     signup: async (userData) => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay();
+//             console.log("MOCK API: signup", userData);
+//             return { token: 'mock-signup-token-xyz', username: userData.username, _id: `newmock-${Date.now()}`, sessionId: `mock-session-signup-${Date.now()}` };
+//         }
+//         // Real API call
+//         const response = await apiClient.post('/auth/signup', userData);
+//         return response.data;
+//     },
+    
+//     sendMessage: async (payload) => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay(payload.useRag ? 2000 : 1000); // Slower for RAG
+//             console.log("MOCK API: sendMessage", payload);
+//             const botText = payload.useRag 
+//                 ? `This is a MOCKED RAG response to: "${payload.query}". \n\nIt uses your documents (not really). Source [1] is very relevant. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris.`
+//                 : `This is a MOCKED direct LLM response to: "${payload.query}". \n\nSed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.`;
+//             const thinkingText = payload.useRag 
+//                 ? "<thinking>\n1. User query analyzed: seeking information via RAG.\n2. (Mock) Searched user documents for keywords: '" + payload.query.split(" ")[0] + "'.\n3. (Mock) Found 1 relevant chunk in 'mock_document.pdf'.\n4. (Mock) Synthesizing answer based on this chunk and general knowledge.\n</thinking>" 
+//                 : null;
+//             const references = payload.useRag 
+//                 ? [{ number: 1, source: "mock_document.pdf", content_preview: "This is a preview of the mock document containing key information related to the query..."}] 
+//                 : [];
+            
+//             return { 
+//                 reply: {
+//                     role: 'model', 
+//                     parts: [{text: botText }], 
+//                     thinking: thinkingText, 
+//                     references: references,
+//                     timestamp: new Date().toISOString()
+//                 }, 
+//                 sessionId: payload.sessionId, 
+//                 source_pipeline: payload.useRag ? 'mock_ollama_rag' : 'mock_gemini_direct'
+//             };
+//         }
+//         // Real API call
+//         const response = await apiClient.post('/chat/message', payload);
+//         return response.data;
+//     },
+//     getChatHistory: async (sessionId) => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay(300);
+//             console.log("MOCK API: getChatHistory for session", sessionId);
+//             if (sessionId === 'dev-session-123' || sessionId === 'mock-session-123' || sessionId === 'dev-session-appjsx-123') {
+//                  return [
+//                     { _id: 'hist1', role: 'user', parts: [{text: "Hello AI! How does mocking work?"}], timestamp: new Date(Date.now() - 120000).toISOString() },
+//                     { _id: 'hist2', role: 'model', parts: [{text: "Hello User! Mocking involves simulating backend responses so you can test the frontend independently. This is a mocked history message."}], thinking: null, references: [], timestamp: new Date(Date.now() - 100000).toISOString(), source_pipeline: 'mock_gemini_direct' },
+//                     { _id: 'hist3', role: 'user', parts: [{text: "Tell me about RAG."}], timestamp: new Date(Date.now() - 60000).toISOString() },
+//                     { _id: 'hist4', role: 'model', parts: [{text: "RAG stands for Retrieval Augmented Generation. It enhances LLM responses by first retrieving relevant information from a knowledge base. This is a mocked explanation from RAG."}], thinking: "<thinking>User asked about RAG. This is a core concept. I will explain it briefly.</thinking>", references: [{number: 1, source: "RAG_explanation_doc.pdf", content_preview:"RAG combines retrieval with generation..."}], timestamp: new Date(Date.now() - 50000).toISOString(), source_pipeline: 'mock_ollama_rag' },
+//                 ];
+//             }
+//             return [];
+//         }
+//         // Real API call
+//         const response = await apiClient.get(`/chat/history/${sessionId}`);
+//         return response.data;
+//     },
+//     getChatSessions: async () => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay(400);
+//             console.log("MOCK API: getChatSessions");
+//             return [
+//                 { sessionId: 'mock-session-123', updatedAt: new Date().toISOString(), messageCount: 4, preview: "RAG stands for Retrieval Augmented..." },
+//                 { sessionId: 'another-mock-session', updatedAt: new Date(Date.now() - 7200000).toISOString(), messageCount: 10, preview: "Discussing advanced mock topics in detail..." }
+//             ];
+//         }
+//         // Real API call
+//         const response = await apiClient.get('/chat/sessions');
+//         return response.data;
+//     },
+//     startNewSession: async () => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay(100);
+//             const newMockSessionId = `mock-session-${Date.now()}`;
+//             console.log("MOCK API: startNewSession, created:", newMockSessionId);
+//             return { sessionId: newMockSessionId };
+//         }
+//         // Real API call
+//         const response = await apiClient.post('/chat/new_session', {});
+//         return response.data;
+//     },
+
+//     // Mock File Operations
+//     uploadFile: async (formData, onUploadProgress) => {
+//         if (DEV_MODE_MOCK_API) {
+//             const mockFileName = formData.get('file')?.name || 'mock_uploaded_file.pdf';
+//             console.log("MOCK API: uploadFile", mockFileName);
+//             if (onUploadProgress) { /* ... simulate progress ... */ }
+//             await mockDelay(1200);
+//             return { message: `${mockFileName} uploaded (mocked)!`, filename: `server-${mockFileName}`, originalname: mockFileName };
+//         }
+//         // Real API call
+//         const response = await apiClient.post('/upload', formData, {
+//             headers: { 'Content-Type': 'multipart/form-data' },
+//             onUploadProgress: onUploadProgress
+//         });
+//         return response.data;
+//     },
+//     getFiles: async () => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay(200);
+//             console.log("MOCK API: getFiles");
+//             return [
+//                 { serverFilename: 'mock-server-doc1.pdf', originalName: 'My Research Paper.pdf', type: 'application/pdf', size: 123456, lastModified: new Date().toISOString() },
+//                 { serverFilename: 'mock-server-code1.py', originalName: 'script.py', type: 'text/x-python', size: 7890, lastModified: new Date().toISOString() },
+//                 { serverFilename: 'mock-manual.txt', originalName: 'User Manual.txt', type: 'text/plain', size: 30250, lastModified: new Date(Date.now()- 86400000).toISOString() },
+
+//             ];
+//         }
+//         // Real API call
+//         const response = await apiClient.get('/files');
+//         return response.data;
+//     },
+//     renameFile: async (serverFilename, newOriginalName) => {
+//          if (DEV_MODE_MOCK_API) {
+//             await mockDelay(300);
+//             console.log("MOCK API: renameFile", serverFilename, "to", newOriginalName);
+//             // Find and update in mock data if you want the list to reflect it immediately
+//             return { message: "File renamed (mocked)" };
+//         }
+//         // Real API call
+//         const response = await apiClient.patch(`/files/${serverFilename}`, { newOriginalName });
+//         return response.data;
+//     },
+//     deleteFile: async (serverFilename) => {
+//          if (DEV_MODE_MOCK_API) {
+//             await mockDelay(300);
+//             console.log("MOCK API: deleteFile", serverFilename);
+//             // Remove from mock data if needed for UI consistency
+//             return { message: "File deleted (mocked)" };
+//         }
+//         // Real API call
+//         const response = await apiClient.delete(`/files/${serverFilename}`);
+//         return response.data;
+//     },
+
+//     // Mock Analysis
+//     requestAnalysis: async (payload) => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay(payload.analysis_type === 'mindmap' ? 3000 : 1500);
+//             console.log("MOCK API: requestAnalysis", payload);
+//             let content = `## Mocked ${payload.analysis_type.toUpperCase()} for: *${payload.filename}*\n\n`;
+//             if (payload.analysis_type === 'faq') {
+//                 content += "**Q1: What is this document about (mocked)?**\nA1: This document (mockingly) covers key concepts related to your query.\n\n**Q2: How is this FAQ generated (mocked)?**\nA2: It's simulated for UI testing purposes, based on the selected document name and analysis type.";
+//             } else if (payload.analysis_type === 'topics') {
+//                 content += "- **Mock Topic 1:** Core ideas from the document (simulated).\n- **Mock Topic 2:** Frontend and UI development strategies.\n- **Mock Topic 3:** Backend API simulation techniques.";
+//             } else if (payload.analysis_type === 'mindmap') {
+//                 content = `# Mocked Mindmap: ${payload.filename}\n## Main Idea 1\n### Sub-Idea 1.1\n### Sub-Idea 1.2\n#### Detail 1.2.1\n## Main Idea 2\n### Sub-Idea 2.1`;
+//             }
+//             return { content: content, thinking: "Mocked thinking process:\n1. Received analysis request for '" + payload.filename + "' (type: "+payload.analysis_type+").\n2. (Mock) Loaded document content.\n3. (Mock) Applied specific LLM prompt for "+payload.analysis_type+".\n4. Generated the mock output displayed." };
+//         }
+//         // Real API call
+//         const response = await apiClient.post('/analysis/document', payload);
+//         return response.data;
+//     },
+    
+//     updateUserLLMConfig: async (configData) => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay(); console.log("MOCK API: updateUserLLMConfig", configData);
+//             localStorage.setItem('mockSelectedLLM', configData.llmProvider);
+//             if(configData.llmProvider === 'gemini' && configData.apiKey){ localStorage.setItem('mockGeminiApiKeyStatus', 'KeyProvided(Mock)'); }
+//             return { message: `LLM preference updated to ${configData.llmProvider} (mocked).` };
+//         }
+//         const response = await apiClient.post('/user/config/llm', configData);
+//         return response.data;
+//     },
+//     getUserLLMConfig: async () => {
+//          if (DEV_MODE_MOCK_API) {
+//             await mockDelay();
+//             const mockLLM = localStorage.getItem('mockSelectedLLM') || 'ollama';
+//             console.log("MOCK API: getUserLLMConfig, returning:", mockLLM);
+//             return { llmProvider: mockLLM };
+//         }
+//         const response = await apiClient.get('/user/config/llm');
+//         return response.data;
+//     },
+
+//     getOrchestratorStatus: async () => {
+//         if (DEV_MODE_MOCK_API) {
+//             await mockDelay(100);
+//             return { status: "ok", message: "Orchestrator (Mocked & Online)", database_status: "Connected" };
+//         }
+//         try {
+//             const healthUrl = (import.meta.env.VITE_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api').replace('/api', '');
+//             const response = await axios.get(`${healthUrl}/api/health`); // Use axios directly for non-apiClient base URL
+//             return response.data;
+//         } catch (error) {
+//             console.warn("Failed to fetch orchestrator status:", error);
+//             return { status: "error", message: "Orchestrator unreachable" };
+//         }
+//     },
+//     // Add syllabus if needed
+//     getSyllabus: async (subjectId) => {
+//         if(DEV_MODE_MOCK_API) {
+//             await mockDelay();
+//             console.log("MOCK API: getSyllabus", subjectId);
+//             return `# Mock Syllabus for ${subjectId}\n\n- Topic 1\n- Topic 2`;
+//         }
+//         const response = await apiClient.get(`/syllabus/${subjectId}`);
+//         return response.data;
+//     }
+// };
+
+// export default api;
+// export { apiClient }; // Export apiClient itself if needed for direct use (e.g. file uploads with custom config)
+
+
+
+
+
+
+
+
 import axios from 'axios';
 
-const DEV_MODE_MOCK_API = true; // Set this to true or false as needed
+const DEV_MODE_MOCK_API = false; // <--- SET TO FALSE to make real API calls
 
-// --- Define apiClient at the top level ---
 const apiClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api',
-    headers: {
-        'Content-Type': 'application/json',
-    }
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api',
+    headers: { 'Content-Type': 'application/json' }
 });
 
-// Add a request interceptor to include the token (if not in dev mode or if real calls are made in dev mode)
-if (!DEV_MODE_MOCK_API) { // Or adjust this logic if some dev calls are real
-    apiClient.interceptors.request.use(config => {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    }, error => {
-        return Promise.reject(error);
-    });
-}
-// If you want the interceptor to always run, even for potential real calls during dev mode, move it outside the if.
-// For purely mocked API, the interceptor might not be strictly necessary.
-// However, it's good practice to have it for when DEV_MODE_MOCK_API is false.
-// Let's make it always active for consistency when switching modes:
 apiClient.interceptors.request.use(config => {
-    if (DEV_MODE_MOCK_API && config.url.startsWith(apiClient.defaults.baseURL)) {
-        // If mocking and it's a call to our base URL, we might not need the token.
-        // However, if some mock functions call the real apiClient, token might be needed.
-        // For simplicity with full mocking, let's assume token isn't added for mock calls.
-        // BUT, if you have a mix, you'd need more nuanced logic.
-        // Given our setup, the mock functions DON'T use apiClient directly.
-        // So this interceptor will only apply when DEV_MODE_MOCK_API is false.
-    }
     const token = localStorage.getItem('authToken');
-    if (token) {
+    if (token) { // Always try to add token if it exists for real calls
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
-}, error => {
-    return Promise.reject(error);
-});
+}, error => Promise.reject(error));
 
-
-const mockDelay = (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
+// Mock functions are only used if DEV_MODE_MOCK_API is true
+const mockDelay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
+const MOCKED_FILES_STORE_API = [ /* ... your mock files ... */ ];
+let MOCKED_CHAT_HISTORY_API = {};
 
 const api = {
     login: async (credentials) => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay();
-            console.log("MOCK API: login", credentials);
-            if (credentials.username === "test" && credentials.password === "password") { // Example mock credentials
-                return { token: 'mock-token-xyz', username: 'TestUser', _id: 'testuser123', sessionId: 'mock-session-123' };
-            } else if (credentials.username === "DevUser" && credentials.password === "devpass") { // For the AuthContext bypass
-                 return { token: 'fake-dev-token', username: 'DevUser', _id: 'devUser123', sessionId: 'dev-session-123' };
+        if (DEV_MODE_MOCK_API) { 
+            await mockDelay(); console.log("MOCK API: login", credentials);
+            const username = credentials.username || 'DevUser';
+            if ((username === 'DevUser' && credentials.password === 'devpass') || (username === 'test' && credentials.password === 'password')) {
+                 return { token: `mock-token-${username}`, username, _id: `mock-id-${username}`, sessionId: `mock-session-${Date.now()}` };
             }
-            // Simulate a failure for other credentials if needed for testing UI
-            throw new Error("Invalid mock credentials");
+            throw new Error("Mock: Invalid credentials");
         }
-        // Real API call
         const response = await apiClient.post('/auth/signin', credentials);
         return response.data;
     },
     signup: async (userData) => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay();
-            console.log("MOCK API: signup", userData);
-            return { token: 'mock-signup-token-xyz', username: userData.username, _id: `newmock-${Date.now()}`, sessionId: `mock-session-signup-${Date.now()}` };
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.post('/auth/signup', userData);
         return response.data;
     },
-    
     sendMessage: async (payload) => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay(payload.useRag ? 2000 : 1000); // Slower for RAG
-            console.log("MOCK API: sendMessage", payload);
-            const botText = payload.useRag 
-                ? `This is a MOCKED RAG response to: "${payload.query}". \n\nIt uses your documents (not really). Source [1] is very relevant. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris.`
-                : `This is a MOCKED direct LLM response to: "${payload.query}". \n\nSed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.`;
-            const thinkingText = payload.useRag 
-                ? "<thinking>\n1. User query analyzed: seeking information via RAG.\n2. (Mock) Searched user documents for keywords: '" + payload.query.split(" ")[0] + "'.\n3. (Mock) Found 1 relevant chunk in 'mock_document.pdf'.\n4. (Mock) Synthesizing answer based on this chunk and general knowledge.\n</thinking>" 
-                : null;
-            const references = payload.useRag 
-                ? [{ number: 1, source: "mock_document.pdf", content_preview: "This is a preview of the mock document containing key information related to the query..."}] 
-                : [];
-            
-            return { 
-                reply: {
-                    role: 'model', 
-                    parts: [{text: botText }], 
-                    thinking: thinkingText, 
-                    references: references,
-                    timestamp: new Date().toISOString()
-                }, 
-                sessionId: payload.sessionId, 
-                source_pipeline: payload.useRag ? 'mock_ollama_rag' : 'mock_gemini_direct'
-            };
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.post('/chat/message', payload);
         return response.data;
     },
     getChatHistory: async (sessionId) => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay(300);
-            console.log("MOCK API: getChatHistory for session", sessionId);
-            if (sessionId === 'dev-session-123' || sessionId === 'mock-session-123' || sessionId === 'dev-session-appjsx-123') {
-                 return [
-                    { _id: 'hist1', role: 'user', parts: [{text: "Hello AI! How does mocking work?"}], timestamp: new Date(Date.now() - 120000).toISOString() },
-                    { _id: 'hist2', role: 'model', parts: [{text: "Hello User! Mocking involves simulating backend responses so you can test the frontend independently. This is a mocked history message."}], thinking: null, references: [], timestamp: new Date(Date.now() - 100000).toISOString(), source_pipeline: 'mock_gemini_direct' },
-                    { _id: 'hist3', role: 'user', parts: [{text: "Tell me about RAG."}], timestamp: new Date(Date.now() - 60000).toISOString() },
-                    { _id: 'hist4', role: 'model', parts: [{text: "RAG stands for Retrieval Augmented Generation. It enhances LLM responses by first retrieving relevant information from a knowledge base. This is a mocked explanation from RAG."}], thinking: "<thinking>User asked about RAG. This is a core concept. I will explain it briefly.</thinking>", references: [{number: 1, source: "RAG_explanation_doc.pdf", content_preview:"RAG combines retrieval with generation..."}], timestamp: new Date(Date.now() - 50000).toISOString(), source_pipeline: 'mock_ollama_rag' },
-                ];
-            }
-            return [];
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.get(`/chat/history/${sessionId}`);
         return response.data;
     },
     getChatSessions: async () => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay(400);
-            console.log("MOCK API: getChatSessions");
-            return [
-                { sessionId: 'mock-session-123', updatedAt: new Date().toISOString(), messageCount: 4, preview: "RAG stands for Retrieval Augmented..." },
-                { sessionId: 'another-mock-session', updatedAt: new Date(Date.now() - 7200000).toISOString(), messageCount: 10, preview: "Discussing advanced mock topics in detail..." }
-            ];
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.get('/chat/sessions');
         return response.data;
     },
     startNewSession: async () => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay(100);
-            const newMockSessionId = `mock-session-${Date.now()}`;
-            console.log("MOCK API: startNewSession, created:", newMockSessionId);
-            return { sessionId: newMockSessionId };
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.post('/chat/new_session', {});
         return response.data;
     },
-
-    // Mock File Operations
     uploadFile: async (formData, onUploadProgress) => {
-        if (DEV_MODE_MOCK_API) {
-            const mockFileName = formData.get('file')?.name || 'mock_uploaded_file.pdf';
-            console.log("MOCK API: uploadFile", mockFileName);
-            if (onUploadProgress) { /* ... simulate progress ... */ }
-            await mockDelay(1200);
-            return { message: `${mockFileName} uploaded (mocked)!`, filename: `server-${mockFileName}`, originalname: mockFileName };
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.post('/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: onUploadProgress
+            headers: { 'Content-Type': 'multipart/form-data' }, // Token added by interceptor
+            onUploadProgress
         });
         return response.data;
     },
     getFiles: async () => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay(200);
-            console.log("MOCK API: getFiles");
-            return [
-                { serverFilename: 'mock-server-doc1.pdf', originalName: 'My Research Paper.pdf', type: 'application/pdf', size: 123456, lastModified: new Date().toISOString() },
-                { serverFilename: 'mock-server-code1.py', originalName: 'script.py', type: 'text/x-python', size: 7890, lastModified: new Date().toISOString() },
-                { serverFilename: 'mock-manual.txt', originalName: 'User Manual.txt', type: 'text/plain', size: 30250, lastModified: new Date(Date.now()- 86400000).toISOString() },
-
-            ];
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.get('/files');
         return response.data;
     },
     renameFile: async (serverFilename, newOriginalName) => {
-         if (DEV_MODE_MOCK_API) {
-            await mockDelay(300);
-            console.log("MOCK API: renameFile", serverFilename, "to", newOriginalName);
-            // Find and update in mock data if you want the list to reflect it immediately
-            return { message: "File renamed (mocked)" };
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.patch(`/files/${serverFilename}`, { newOriginalName });
         return response.data;
     },
     deleteFile: async (serverFilename) => {
-         if (DEV_MODE_MOCK_API) {
-            await mockDelay(300);
-            console.log("MOCK API: deleteFile", serverFilename);
-            // Remove from mock data if needed for UI consistency
-            return { message: "File deleted (mocked)" };
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.delete(`/files/${serverFilename}`);
         return response.data;
     },
-
-    // Mock Analysis
     requestAnalysis: async (payload) => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay(payload.analysis_type === 'mindmap' ? 3000 : 1500);
-            console.log("MOCK API: requestAnalysis", payload);
-            let content = `## Mocked ${payload.analysis_type.toUpperCase()} for: *${payload.filename}*\n\n`;
-            if (payload.analysis_type === 'faq') {
-                content += "**Q1: What is this document about (mocked)?**\nA1: This document (mockingly) covers key concepts related to your query.\n\n**Q2: How is this FAQ generated (mocked)?**\nA2: It's simulated for UI testing purposes, based on the selected document name and analysis type.";
-            } else if (payload.analysis_type === 'topics') {
-                content += "- **Mock Topic 1:** Core ideas from the document (simulated).\n- **Mock Topic 2:** Frontend and UI development strategies.\n- **Mock Topic 3:** Backend API simulation techniques.";
-            } else if (payload.analysis_type === 'mindmap') {
-                content = `# Mocked Mindmap: ${payload.filename}\n## Main Idea 1\n### Sub-Idea 1.1\n### Sub-Idea 1.2\n#### Detail 1.2.1\n## Main Idea 2\n### Sub-Idea 2.1`;
-            }
-            return { content: content, thinking: "Mocked thinking process:\n1. Received analysis request for '" + payload.filename + "' (type: "+payload.analysis_type+").\n2. (Mock) Loaded document content.\n3. (Mock) Applied specific LLM prompt for "+payload.analysis_type+".\n4. Generated the mock output displayed." };
-        }
-        // Real API call
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.post('/analysis/document', payload);
         return response.data;
     },
-    
     updateUserLLMConfig: async (configData) => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay(); console.log("MOCK API: updateUserLLMConfig", configData);
-            localStorage.setItem('mockSelectedLLM', configData.llmProvider);
-            if(configData.llmProvider === 'gemini' && configData.apiKey){ localStorage.setItem('mockGeminiApiKeyStatus', 'KeyProvided(Mock)'); }
-            return { message: `LLM preference updated to ${configData.llmProvider} (mocked).` };
-        }
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.post('/user/config/llm', configData);
         return response.data;
     },
     getUserLLMConfig: async () => {
-         if (DEV_MODE_MOCK_API) {
-            await mockDelay();
-            const mockLLM = localStorage.getItem('mockSelectedLLM') || 'ollama';
-            console.log("MOCK API: getUserLLMConfig, returning:", mockLLM);
-            return { llmProvider: mockLLM };
-        }
+        if (DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.get('/user/config/llm');
         return response.data;
     },
-
     getOrchestratorStatus: async () => {
-        if (DEV_MODE_MOCK_API) {
-            await mockDelay(100);
-            return { status: "ok", message: "Orchestrator (Mocked & Online)", database_status: "Connected" };
-        }
-        try {
-            const healthUrl = (import.meta.env.VITE_API_BASE_URL || process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api').replace('/api', '');
-            const response = await axios.get(`${healthUrl}/api/health`); // Use axios directly for non-apiClient base URL
-            return response.data;
-        } catch (error) {
-            console.warn("Failed to fetch orchestrator status:", error);
-            return { status: "error", message: "Orchestrator unreachable" };
-        }
+        if (DEV_MODE_MOCK_API) { return { status: "ok", message: "Backend (Mocked & Healthy)", database_status: "Connected" };}
+        const baseUrlForHealth = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api').replace('/api', '');
+        const response = await axios.get(`${baseUrlForHealth}/api/health`);
+        return response.data;
     },
-    // Add syllabus if needed
     getSyllabus: async (subjectId) => {
-        if(DEV_MODE_MOCK_API) {
-            await mockDelay();
-            console.log("MOCK API: getSyllabus", subjectId);
-            return `# Mock Syllabus for ${subjectId}\n\n- Topic 1\n- Topic 2`;
-        }
+        if(DEV_MODE_MOCK_API) { /* ... as in previous full mock ... */ }
         const response = await apiClient.get(`/syllabus/${subjectId}`);
         return response.data;
     }
 };
 
 export default api;
-export { apiClient }; // Export apiClient itself if needed for direct use (e.g. file uploads with custom config)
+export { apiClient };
 ```
 
 `src/utils/helpers.js`
@@ -4519,6 +6067,9 @@ export default {
   },
   plugins: [],
 }
+
+
+
 ```
 
 `vite.config.js`

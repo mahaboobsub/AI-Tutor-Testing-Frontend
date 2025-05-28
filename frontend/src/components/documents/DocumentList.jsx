@@ -1,27 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import api from '../../services/api';
-import toast from 'react-hot-toast';
-import { FileText, Edit3, Trash2, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
-// You'll need a modal component for rename
-// import RenameFileModal from './RenameFileModal'; 
 
-function DocumentList() {
+
+// frontend/src/components/documents/DocumentList.jsx
+import React, { useState, useEffect, useCallback } from 'react';
+import api from '../../services/api.js'; // Mocked for V1
+import toast from 'react-hot-toast';
+import { FileText, Edit3, Trash2, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
+import IconButton from '../core/IconButton.jsx'; // Make sure IconButton is imported
+
+// Props from LeftPanel: onSelectDocument is selectDocumentForAnalysis from AppStateContext
+// selectedDocument is selectedDocumentForAnalysis from AppStateContext
+function DocumentList({ onSelectDocument, selectedDocument }) { 
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    // const [showRenameModal, setShowRenameModal] = useState(false);
-    // const [fileToRename, setFileToRename] = useState(null);
 
     const fetchFiles = useCallback(async () => {
         setLoading(true);
         setError('');
         try {
-            const userFiles = await api.getFiles();
-            setFiles(userFiles || []);
+            const userFiles = await api.getFiles(); // Mocked call
+            setFiles(Array.isArray(userFiles) ? userFiles : []);
         } catch (err) {
-            setError(err.message || "Failed to fetch documents.");
-            toast.error("Could not load your documents.");
-            console.error(err);
+            setError(err.message || "Failed to fetch mock documents.");
+            toast.error("Could not load mock documents.");
+            console.error("Mock getFiles error:", err);
         } finally {
             setLoading(false);
         }
@@ -31,31 +33,36 @@ function DocumentList() {
         fetchFiles();
     }, [fetchFiles]);
 
-    const handleRename = async (file, newName) => {
-        // This would be triggered by a modal
-        if (!newName || newName === file.originalName) return;
-        const toastId = toast.loading(`Renaming ${file.originalName}...`);
+    const handleRename = async (file, newOriginalName) => {
+        if (!newOriginalName || newOriginalName === file.originalName) return;
+        const toastId = toast.loading(`Renaming ${file.originalName} (mock)...`);
         try {
-            await api.renameFile(file.serverFilename, newName);
-            toast.success(`Renamed to ${newName}`, { id: toastId });
-            fetchFiles(); // Refresh list
+            await api.renameFile(file.serverFilename, newOriginalName); // Mocked
+            toast.success(`Renamed to ${newOriginalName} (mock).`, { id: toastId });
+            fetchFiles(); 
+            if (selectedDocument?.serverFilename === file.serverFilename) {
+                onSelectDocument({...file, originalName: newOriginalName});
+            }
         } catch (err) {
-            toast.error(`Rename failed: ${err.message}`, { id: toastId });
+            toast.error(`Mock rename failed: ${err.message}`, { id: toastId });
         }
     };
 
     const handleDelete = async (file) => {
-        if (!window.confirm(`Are you sure you want to delete "${file.originalName}"? It will be moved to backup.`)) return;
-        const toastId = toast.loading(`Deleting ${file.originalName}...`);
+        if (!window.confirm(`MOCK: Are you sure you want to delete "${file.originalName}"?`)) return;
+        const toastId = toast.loading(`Deleting ${file.originalName} (mock)...`);
         try {
-            await api.deleteFile(file.serverFilename);
-            toast.success(`${file.originalName} moved to backup.`, { id: toastId });
-            fetchFiles(); // Refresh list
+            await api.deleteFile(file.serverFilename); // Mocked
+            toast.success(`${file.originalName} deleted (mock).`, { id: toastId });
+            fetchFiles();
+            if (selectedDocument?.serverFilename === file.serverFilename) {
+                onSelectDocument(null); 
+            }
         } catch (err) {
-            toast.error(`Delete failed: ${err.message}`, { id: toastId });
+            toast.error(`Mock delete failed: ${err.message}`, { id: toastId });
         }
     };
-
+    
     if (loading) {
         return (
             <div className="flex items-center justify-center p-4 text-text-muted-light dark:text-text-muted-dark">
@@ -66,48 +73,53 @@ function DocumentList() {
 
     if (error) {
         return (
-            <div className="p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 rounded-md text-sm flex items-center gap-2">
+            <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-300 rounded-md text-sm flex items-center gap-2">
                 <AlertTriangle size={18} /> {error} 
-                <button onClick={fetchFiles} className="ml-auto text-xs underline">Retry</button>
+                <button onClick={fetchFiles} className="ml-auto text-xs underline hover:text-red-400">Retry</button>
             </div>
         );
     }
     
     if (files.length === 0) {
-        return <p className="text-center text-xs text-text-muted-light dark:text-text-muted-dark p-4">No documents uploaded yet. Use the section above to add files.</p>;
+        return <p className="text-center text-xs text-text-muted-light dark:text-text-muted-dark p-4">No documents uploaded (mock data is empty or not loading).</p>;
     }
 
-    // TODO: Implement document selection for analysis context.
-    // This requires passing a callback or using context to inform App.js or AnalysisControls.jsx
-    // of the selected document.
-
     return (
-        <div className="space-y-1.5 text-xs custom-scrollbar">
-            {files.map(file => (
-                <div 
-                    key={file.serverFilename} 
-                    className="p-2 bg-surface-light dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md flex items-center justify-between hover:shadow-md transition-shadow"
-                    // onClick={() => onSelectDocument(file)} // Example of selection
-                    // className={`... ${selectedDoc?.serverFilename === file.serverFilename ? 'ring-2 ring-primary' : ''}`}
-                >
-                    <div className="flex items-center gap-1.5 truncate">
-                        <FileText size={16} className="text-primary flex-shrink-0" />
-                        <span className="truncate" title={file.originalName}>{file.originalName}</span>
+        <div className="space-y-1.5 text-xs custom-scrollbar pr-1"> {/* Added pr-1 for scrollbar */}
+            {files.map(file => {
+                const isSelected = selectedDocument?.serverFilename === file.serverFilename;
+                return (
+                    <div 
+                        key={file.serverFilename} 
+                        onClick={() => onSelectDocument(isSelected ? null : file)} // Call the prop
+                        className={`p-2.5 bg-surface-light dark:bg-gray-800 border rounded-md flex items-center justify-between hover:shadow-md transition-all duration-150 cursor-pointer
+                                    ${isSelected 
+                                        ? 'ring-2 ring-primary dark:ring-primary-light shadow-lg border-primary dark:border-primary-light' 
+                                        : 'border-border-light dark:border-border-dark hover:border-gray-400 dark:hover:border-gray-500'}`}
+                        title={`Select ${file.originalName} for analysis`}
+                    >
+                        <div className="flex items-center gap-2 truncate">
+                            {isSelected ? 
+                                <CheckCircle size={16} className="text-green-500 flex-shrink-0" /> :
+                                <FileText size={16} className={`${isSelected ? 'text-white dark:text-primary-light' : 'text-primary dark:text-primary-light'} flex-shrink-0`} />
+                            }
+                            <span className={`truncate ${isSelected ? 'font-semibold text-primary dark:text-primary-light' : 'text-text-light dark:text-text-dark'}`} >
+                                {file.originalName}
+                            </span>
+                        </div>
+                        <div className="flex-shrink-0 flex items-center gap-0.5"> {/* Reduced gap for smaller buttons */}
+                            <IconButton icon={Edit3} size="sm" variant="ghost" title="Rename"
+                                onClick={(e) => { e.stopPropagation(); const newN = prompt(`Rename "${file.originalName}" to:`, file.originalName); if(newN && newN.trim() !== '' && newN !== file.originalName) handleRename(file, newN.trim()); }}
+                                className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 p-1" // Smaller padding
+                            />
+                            <IconButton icon={Trash2} size="sm" variant="ghost" title="Delete"
+                                onClick={(e) => { e.stopPropagation(); handleDelete(file);}}
+                                className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1" // Smaller padding
+                            />
+                        </div>
                     </div>
-                    <div className="flex-shrink-0 flex items-center gap-1">
-                        <button 
-                            // onClick={(e) => { e.stopPropagation(); setFileToRename(file); setShowRenameModal(true); }} 
-                            onClick={(e) => { e.stopPropagation(); const newN = prompt(`Rename "${file.originalName}" to:`, file.originalName); if(newN) handleRename(file, newN); }}
-                            className="p-1 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300" title="Rename">
-                            <Edit3 size={14} />
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete(file);}} className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Delete">
-                            <Trash2 size={14} />
-                        </button>
-                    </div>
-                </div>
-            ))}
-            {/* <RenameFileModal isOpen={showRenameModal} onClose={() => setShowRenameModal(false)} file={fileToRename} onSave={handleRename} /> */}
+                );
+            })}
         </div>
     );
 }

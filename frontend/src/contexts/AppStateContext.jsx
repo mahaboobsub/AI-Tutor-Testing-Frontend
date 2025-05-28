@@ -1,37 +1,75 @@
-// import React, { createContext, useState, useContext } from 'react';
+// // frontend/src/contexts/AppStateContext.jsx
+// import React, { createContext, useState, useContext, useEffect } from 'react';
 
-// export const AppStateContext = createContext();
+// export const AppStateContext = createContext(null);
 
-// export const useAppState = () => useContext(AppStateContext);
+// export const useAppState = () => {
+//     const context = useContext(AppStateContext);
+//     if (!context) throw new Error('useAppState must be used within an AppStateProvider');
+//     return context;
+// };
+
+// const INITIAL_DEV_SESSION_ID = `dev-ui-session-${Date.now()}`; 
+// const defaultSystemPromptText = "You are assessing understanding of engineering/scientific topics. Ask targeted questions to test knowledge, identify misconceptions, and provide feedback on the answers. Start by asking the user what topic they want to be quizzed on.";
 
 // export const AppStateProvider = ({ children }) => {
-//     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark'); // 'light' or 'dark'
-//     const [selectedLLM, setSelectedLLM] = useState(localStorage.getItem('selectedLLM') || 'ollama'); // 'ollama' or 'gemini'
+//     const [theme, setThemeState] = useState(() => localStorage.getItem('theme') || 'dark');
+//     const [selectedLLM, setSelectedLLM] = useState(localStorage.getItem('selectedLLM') || 'ollama');
 //     const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
-//     const [isRightPanelOpen, setIsRightPanelOpen] = useState(false); // Initially closed
-//     const [currentSessionId, setCurrentSessionId] = useState(localStorage.getItem('aiTutorSessionId') || null);
+//     const [isRightPanelOpen, setIsRightPanelOpen] = useState(true); 
+    
+//     const [currentSessionId, setCurrentSessionIdState] = useState(() => {
+//         return localStorage.getItem('aiTutorSessionId') || INITIAL_DEV_SESSION_ID;
+//     });
+    
+//     const [systemPrompt, setSystemPromptState] = useState(
+//         localStorage.getItem('aiTutorSystemPrompt') || defaultSystemPromptText
+//     );
+    
+//     // THIS IS THE STATE FOR THE SELECTED DOCUMENT
+//     const [selectedDocumentForAnalysis, setSelectedDocumentForAnalysisState] = useState(null); // Stores { originalName, serverFilename, ... } or null
 
 //     const toggleTheme = () => {
-//         const newTheme = theme === 'light' ? 'dark' : 'light';
-//         setTheme(newTheme);
-//         localStorage.setItem('theme', newTheme);
-//         document.documentElement.classList.toggle('dark', newTheme === 'dark');
+//         setThemeState(prevTheme => {
+//             const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+//             localStorage.setItem('theme', newTheme);
+//             return newTheme;
+//         });
 //     };
     
 //     const switchLLM = (llm) => {
 //         setSelectedLLM(llm);
 //         localStorage.setItem('selectedLLM', llm);
-//         // Potentially trigger API key update modal if switching to Gemini and key not set
 //     };
 
 //     const setSessionId = (sessionId) => {
-//         setCurrentSessionId(sessionId);
-//         if (sessionId) {
-//             localStorage.setItem('aiTutorSessionId', sessionId);
-//         } else {
-//             localStorage.removeItem('aiTutorSessionId');
-//         }
+//         const newId = sessionId || INITIAL_DEV_SESSION_ID; 
+//         setCurrentSessionIdState(newId);
+//         localStorage.setItem('aiTutorSessionId', newId);
 //     };
+
+//     const setSystemPrompt = (promptText) => {
+//         const newPrompt = promptText || defaultSystemPromptText;
+//         setSystemPromptState(newPrompt);
+//         localStorage.setItem('aiTutorSystemPrompt', newPrompt);
+//     };
+
+//     // THIS IS THE SETTER FOR THE SELECTED DOCUMENT
+//     const selectDocumentForAnalysis = (documentFile) => { 
+//         console.log("AppStateContext: selectDocumentForAnalysis called with:", documentFile);
+//         setSelectedDocumentForAnalysisState(documentFile); // documentFile is { originalName, serverFilename } or null
+//     };
+
+//     useEffect(() => {
+//         document.documentElement.classList.remove('light', 'dark');
+//         document.documentElement.classList.add(theme);
+//     }, [theme]);
+
+//     useEffect(() => { 
+//         if (!currentSessionId) {
+//             setSessionId(INITIAL_DEV_SESSION_ID);
+//         }
+//     }, [currentSessionId]); // Removed setSessionId from dependencies
 
 
 //     return (
@@ -40,129 +78,75 @@
 //             selectedLLM, switchLLM,
 //             isLeftPanelOpen, setIsLeftPanelOpen,
 //             isRightPanelOpen, setIsRightPanelOpen,
-//             currentSessionId, setSessionId
+//             currentSessionId, setSessionId,
+//             systemPrompt, setSystemPrompt,
+//             selectedDocumentForAnalysis, selectDocumentForAnalysis // Provide selected doc and its setter
 //         }}>
 //             {children}
 //         </AppStateContext.Provider>
 //     );
 // };
-// ... other imports ...
-// const DEV_MODE_BYPASS_AUTH = true; // Match the value in AuthContext for consistency in dev setup
 
-// export const AppStateProvider = ({ children }) => {
-//     // ... other states ...
-//     const [currentSessionId, setCurrentSessionId] = useState(
-//         DEV_MODE_BYPASS_AUTH 
-//         ? 'dev-session-123' 
-//         : localStorage.getItem('aiTutorSessionId') || null
-//     );
-
-//     // ... rest of the AppStateProvider ...
-
-//     const setSessionId = (sessionId) => {
-//         setCurrentSessionId(sessionId);
-//         if (DEV_MODE_BYPASS_AUTH && !sessionId) { // Prevent clearing dev session on accidental null set
-//             console.log("DEV_MODE: Preventing clearing of dev session ID.");
-//             if (!currentSessionId) setCurrentSessionId('dev-session-123'); // Reset if it somehow got cleared
-//             return;
-//         }
-//         if (sessionId) {
-//             localStorage.setItem('aiTutorSessionId', sessionId);
-//         } else {
-//             localStorage.removeItem('aiTutorSessionId');
-//         }
-//     };
-
-//     return (
-//         <AppStateContext.Provider value={{
-//             // ... other values ...
-//             currentSessionId, setSessionId 
-//         }}>
-//             {children}
-//         </AppStateContext.Provider>
-//     );
-// };
 // frontend/src/contexts/AppStateContext.jsx
-
+// frontend/src/contexts/AppStateContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
-export const AppStateContext = createContext(null); // Initialize with null
+export const AppStateContext = createContext(null);
 
-export const useAppState = () => { // Custom hook to use the AppStateContext
+export const useAppState = () => {
     const context = useContext(AppStateContext);
-    if (context === undefined || context === null) { // Check if context is undefined or null
-        throw new Error('useAppState must be used within an AppStateProvider');
-    }
+    if (!context) throw new Error('useAppState must be used within an AppStateProvider');
     return context;
 };
 
-const DEV_MODE_BYPASS_AUTH = true; // Ensure this matches other dev flags if used for initial state
+const INITIAL_DEV_SESSION_ID = `dev-ui-session-${Date.now()}`; 
+const defaultSystemPromptText = "You are assessing understanding of engineering/scientific topics..."; // Truncated for brevity
 
 export const AppStateProvider = ({ children }) => {
     const [theme, setThemeState] = useState(() => {
-        const storedTheme = localStorage.getItem('theme');
-        // Ensure theme is applied on initial load if not already on html tag
-        if (storedTheme === 'dark') document.documentElement.classList.add('dark');
-        else document.documentElement.classList.remove('dark');
-        return storedTheme || 'dark';
+        const storedTheme = localStorage.getItem('theme') || 'dark'; // Default to dark
+        console.log("AppStateContext: Initial theme from localStorage or default:", storedTheme);
+        // Initial class setting (client-side only)
+        if (typeof window !== 'undefined') {
+            const root = document.documentElement;
+            root.classList.remove('light', 'dark');
+            root.classList.add(storedTheme);
+        }
+        return storedTheme;
     });
+
+    // ... other states (selectedLLM, isLeftPanelOpen, etc. as before) ...
     const [selectedLLM, setSelectedLLM] = useState(localStorage.getItem('selectedLLM') || 'ollama');
     const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(true);
-    const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
-    const [currentSessionId, setCurrentSessionIdState] = useState(
-        DEV_MODE_BYPASS_AUTH
-        ? 'dev-session-appstate-123' // Consistent dev session ID
-        : localStorage.getItem('aiTutorSessionId') || null
-    );
-    // State for the selected document for analysis
-    const [selectedDocumentForAnalysis, setSelectedDocumentForAnalysis] = useState(null);
+    const [isRightPanelOpen, setIsRightPanelOpen] = useState(true); 
+    const [currentSessionId, setCurrentSessionIdState] = useState(() => localStorage.getItem('aiTutorSessionId') || INITIAL_DEV_SESSION_ID);
+    const [systemPrompt, setSystemPromptState] = useState(localStorage.getItem('aiTutorSystemPrompt') || defaultSystemPromptText);
+    const [selectedDocumentForAnalysis, setSelectedDocumentForAnalysisState] = useState(null);
 
 
     const toggleTheme = () => {
         setThemeState(prevTheme => {
             const newTheme = prevTheme === 'light' ? 'dark' : 'light';
             localStorage.setItem('theme', newTheme);
-            document.documentElement.classList.toggle('dark', newTheme === 'dark');
-            // For Tailwind, class on <html> is usually enough.
-            // If you have body-specific theme styles:
-            // document.body.classList.remove(prevTheme);
-            // document.body.classList.add(newTheme);
+            console.log("AppStateContext: Toggling theme to:", newTheme);
             return newTheme;
         });
     };
     
-    const switchLLM = (llm) => {
-        setSelectedLLM(llm);
-        localStorage.setItem('selectedLLM', llm);
-    };
+    // ... switchLLM, setSessionId, setSystemPrompt, selectDocumentForAnalysis ...
+    const switchLLM = (llm) => { setSelectedLLM(llm); localStorage.setItem('selectedLLM', llm); };
+    const setSessionId = (sessionId) => { /* ... as before ... */ };
+    const setSystemPrompt = (promptText) => { /* ... as before ... */ };
+    const selectDocumentForAnalysis = (documentFile) => { setSelectedDocumentForAnalysisState(documentFile); };
 
-    const setSessionId = (sessionId) => {
-        setCurrentSessionIdState(sessionId);
-        if (DEV_MODE_BYPASS_AUTH && !sessionId && currentSessionId) {
-             console.warn("DEV_MODE: Attempted to clear dev session ID. Retaining current dev session.");
-             if(!currentSessionIdState) setCurrentSessionIdState('dev-session-appstate-123'); // Ensure it has a value
-             return;
-        }
-        if (sessionId) {
-            localStorage.setItem('aiTutorSessionId', sessionId);
-        } else {
-            localStorage.removeItem('aiTutorSessionId');
-        }
-    };
 
-    const selectDocumentForAnalysis = (documentFile) => { // documentFile could be { originalName, serverFilename }
-        setSelectedDocumentForAnalysis(documentFile);
-    };
-
-    // Apply theme to HTML element on initial load and when theme changes
-     useEffect(() => {
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [theme]);
-
+    // This useEffect is critical for APPLYING the theme class to the HTML element
+    useEffect(() => {
+        console.log("AppStateContext: Theme useEffect triggered. Current theme state:", theme);
+        const rootHtmlElement = document.documentElement;
+        rootHtmlElement.classList.remove('light', 'dark'); // Remove any existing
+        rootHtmlElement.classList.add(theme); // Add the current theme class
+    }, [theme]); // Re-run ONLY when theme state changes
 
     return (
         <AppStateContext.Provider value={{
@@ -170,7 +154,8 @@ export const AppStateProvider = ({ children }) => {
             selectedLLM, switchLLM,
             isLeftPanelOpen, setIsLeftPanelOpen,
             isRightPanelOpen, setIsRightPanelOpen,
-            currentSessionId, setSessionId, // Use the wrapped setter
+            currentSessionId, setSessionId,
+            systemPrompt, setSystemPrompt,
             selectedDocumentForAnalysis, selectDocumentForAnalysis
         }}>
             {children}

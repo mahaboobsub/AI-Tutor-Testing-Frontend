@@ -1,734 +1,202 @@
-// // import { useState } from 'react'
-// // import reactLogo from './assets/react.svg'
-// // import viteLogo from '/vite.svg'
-// // import './App.css'
-
-// // function App() {
-// //   const [count, setCount] = useState(0)
-
-// //   return (
-// //     <>
-// //       <div>
-// //         <a href="https://vite.dev" target="_blank">
-// //           <img src={viteLogo} className="logo" alt="Vite logo" />
-// //         </a>
-// //         <a href="https://react.dev" target="_blank">
-// //           <img src={reactLogo} className="logo react" alt="React logo" />
-// //         </a>
-// //       </div>
-// //       <h1>Vite + React</h1>
-// //       <div className="card">
-// //         <button onClick={() => setCount((count) => count + 1)}>
-// //           count is {count}
-// //         </button>
-// //         <p>
-// //           Edit <code>src/App.jsx</code> and save to test HMR
-// //         </p>
-// //       </div>
-// //       <p className="read-the-docs">
-// //         Click on the Vite and React logos to learn more
-// //       </p>
-// //     </>
-// //   )
-// // }
-
-// // export default App
-
 // import React, { useState, useEffect, useCallback } from 'react';
-// import { useAuth } from './hooks/useAuth';
-// import { useAppState } from './contexts/AppStateContext';
-// import AuthModal from './components/auth/AuthModal';
-// import TopNav from './components/layout/TopNav';
-// import LeftPanel from './components/layout/LeftPanel';
-// import CenterPanel from './components/layout/CenterPanel';
-// import RightPanel from './components/layout/RightPanel';
-// import api from './services/api'; // Your API service functions
+// import { useAuth } from './hooks/useAuth.jsx';
+// import { useAppState } from './contexts/AppStateContext.jsx';
+// import AuthModal from './components/auth/AuthModal.jsx';
+// import TopNav from './components/layout/TopNav.jsx';
+// import LeftPanel from './components/layout/LeftPanel.jsx';
+// import CenterPanel from './components/layout/CenterPanel.jsx';
+// import RightPanel from './components/layout/RightPanel.jsx';
+// import LeftCollapsedNav from './components/layout/LeftCollapsedNav.jsx';
+// import RightCollapsedNav from './components/layout/RightCollapsedNav.jsx';
+// import ChatHistoryModal from './components/chat/ChatHistoryModal.jsx';
+// import api from './services/api.js';
 // import toast from 'react-hot-toast';
 // import { motion, AnimatePresence } from 'framer-motion';
 
-// // Icons
-// import { AlertTriangle, CheckCircle2 } from 'lucide-react';
-
-
-// function App() {
-//     const { token, user, loading: authLoading, logout, setUser: setAuthUser } = useAuth();
-//     const { 
-//         theme, 
-//         selectedLLM,
-//         isLeftPanelOpen, setIsLeftPanelOpen,
-//         isRightPanelOpen, setIsRightPanelOpen,
-//         currentSessionId, setSessionId: setGlobalSessionId 
-//     } = useAppState();
-    
-//     const [showAuthModal, setShowAuthModal] = useState(false);
-//     const [messages, setMessages] = useState([]);
-//     const [chatStatus, setChatStatus] = useState(''); // e.g., "Thinking...", "Responded"
-//     const [orchestratorStatus, setOrchestratorStatus] = useState({ status: "loading", message: "Connecting..." });
-
-
-//     // Initialize theme
-//     useEffect(() => {
-//         if (theme === 'dark') {
-//             document.documentElement.classList.add('dark');
-//         } else {
-//             document.documentElement.classList.remove('dark');
-//         }
-//     }, [theme]);
-
-//     // Check auth status on initial load
-//     useEffect(() => {
-//         if (!authLoading && !token) {
-//             setShowAuthModal(true);
-//         } else if (token && !currentSessionId) {
-//             // If logged in but no session, create one
-//             api.startNewSession().then(data => {
-//                 setGlobalSessionId(data.sessionId);
-//             }).catch(err => {
-//                 toast.error("Failed to start a new session.");
-//                 console.error(err);
-//             });
-//         }
-//     }, [token, authLoading, currentSessionId, setGlobalSessionId]);
-
-//     // Fetch orchestrator status
-//     useEffect(() => {
-//         const fetchStatus = async () => {
-//             const statusData = await api.getOrchestratorStatus();
-//             setOrchestratorStatus(statusData);
-//         };
-//         fetchStatus();
-//         const intervalId = setInterval(fetchStatus, 20000); // Check every 20s
-//         return () => clearInterval(intervalId);
-//     }, []);
-
-//     // Fetch chat history when session ID changes
-//     const fetchChatHistory = useCallback(async (sid) => {
-//         if (!sid || !token) {
-//             setMessages([]); // Clear messages if no session or token
-//             return;
-//         }
-//         setChatStatus("Loading history...");
-//         try {
-//             const historyData = await api.getChatHistory(sid); // Token is auto-included by axios interceptor
-//             const formattedMessages = (Array.isArray(historyData) ? historyData : []).map(msg => ({
-//                 id: msg.id || msg._id || String(Math.random()),
-//                 sender: msg.role === 'model' ? 'bot' : 'user',
-//                 text: msg.parts && msg.parts.length > 0 ? msg.parts[0].text : (msg.text || ''), // Handle both structures
-//                 thinking: msg.thinking,
-//                 references: msg.references || [],
-//                 timestamp: msg.timestamp
-//             }));
-//             setMessages(formattedMessages);
-//             setChatStatus(formattedMessages.length > 0 ? "History loaded." : "New chat. Send a message to start!");
-//         } catch (error) {
-//             toast.error(`Failed to load chat history: ${error.message}`);
-//             setChatStatus("Error loading history.");
-//             console.error("Failed to load chat history:", error);
-//         }
-//     }, [token]);
-
-//     useEffect(() => {
-//         if (currentSessionId && token) {
-//             fetchChatHistory(currentSessionId);
-//         } else if (!token) {
-//             setMessages([]); // Clear messages if logged out
-//         }
-//     }, [currentSessionId, token, fetchChatHistory]);
-
-
-//     const handleAuthSuccess = (authData) => { // authData contains { token, username, _id, sessionId }
-//         setShowAuthModal(false);
-//         // AuthContext already sets token and user from its login/signup methods
-//         // App.js just needs to use the sessionId provided
-//         if (authData.sessionId) {
-//             setGlobalSessionId(authData.sessionId);
-//         }
-//         // If authData.user is more complete, update AuthContext's user
-//         if(authData.username && authData._id){
-//             setAuthUser({username: authData.username, id: authData._id});
-//         }
-//     };
-    
-//     const handleLogout = () => {
-//         logout();
-//         setGlobalSessionId(null); // Clear session on logout
-//         setShowAuthModal(true); // Show auth modal after logout
-//         toast.success("Logged out successfully.");
-//     };
-
-//     const handleNewChat = async () => {
-//         try {
-//             const data = await api.startNewSession();
-//             setGlobalSessionId(data.sessionId);
-//             setMessages([]); // Clear current messages for the new chat
-//             setChatStatus("New chat started. Send a message!");
-//             toast.success("New chat started!");
-//         } catch (error) {
-//             toast.error("Failed to start new chat.");
-//             console.error("Failed to start new chat:", error);
-//         }
-//     };
-
-
-//     if (authLoading) {
-//         return (
-//             <div className="fixed inset-0 flex items-center justify-center bg-background-dark dark:bg-opacity-80">
-//                 <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
-//                 <p className="ml-4 text-xl text-text-dark">Initializing...</p>
-//             </div>
-//         );
-//     }
-
-//     return (
-//         <div className={`flex flex-col h-screen overflow-hidden font-sans ${theme}`}>
-//             <AnimatePresence>
-//                 {showAuthModal && !token && (
-//                     <AuthModal isOpen={showAuthModal} onClose={handleAuthSuccess} />
-//                 )}
-//             </AnimatePresence>
-
-//             {token && user && (
-//                 <>
-//                     <TopNav
-//                         user={user}
-//                         onLogout={handleLogout}
-//                         onNewChat={handleNewChat}
-//                         onHistoryClick={() => { /* TODO: Implement History Modal/Panel */ toast.info("History feature coming soon!"); }}
-//                         onLLMSwitchClick={() => { /* TODO: Implement LLM Switch Modal */ toast.info("LLM switching coming soon!"); }}
-//                         orchestratorStatus={orchestratorStatus}
-//                     />
-//                     <div className="flex flex-1 overflow-hidden pt-16"> {/* pt-16 for fixed TopNav height */}
-//                         {/* Left Panel */}
-//                         <AnimatePresence>
-//                         {isLeftPanelOpen && (
-//                             <motion.aside 
-//                                 initial={{ x: '-100%', opacity: 0 }}
-//                                 animate={{ x: '0%', opacity: 1 }}
-//                                 exit={{ x: '-100%', opacity: 0 }}
-//                                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-//                                 className="w-64 md:w-72 lg:w-80 bg-surface-light dark:bg-surface-dark border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-4 shadow-lg flex-shrink-0"
-//                             >
-//                                 <LeftPanel />
-//                             </motion.aside>
-//                         )}
-//                         </AnimatePresence>
-
-//                         {/* Center Panel */}
-//                         <main className="flex-1 flex flex-col overflow-hidden p-2 sm:p-4">
-//                            <CenterPanel 
-//                                 messages={messages} 
-//                                 setMessages={setMessages} 
-//                                 currentSessionId={currentSessionId}
-//                                 chatStatus={chatStatus}
-//                                 setChatStatus={setChatStatus}
-//                             />
-//                         </main>
-
-//                         {/* Right Panel */}
-//                         <AnimatePresence>
-//                         {isRightPanelOpen && (
-//                             <motion.aside 
-//                                 initial={{ x: '100%', opacity: 0 }}
-//                                 animate={{ x: '0%', opacity: 1 }}
-//                                 exit={{ x: '100%', opacity: 0 }}
-//                                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-//                                 className="w-64 md:w-72 lg:w-80 bg-surface-light dark:bg-surface-dark border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-4 shadow-lg flex-shrink-0"
-//                             >
-//                                 <RightPanel />
-//                             </motion.aside>
-//                         )}
-//                         </AnimatePresence>
-//                     </div>
-//                 </>
-//             )}
-//         </div>
-//     );
-// }
-
-// export default App;
-
-// import React, { useState, useEffect, useCallback } from 'react';
-// import { useAuth } from './hooks/useAuth';
-// import { useAppState } from './contexts/AppStateContext';
-// import AuthModal from './components/auth/AuthModal';
-// import TopNav from './components/layout/TopNav';
-// import LeftPanel from './components/layout/LeftPanel';
-// import CenterPanel from './components/layout/CenterPanel';
-// import RightPanel from './components/layout/RightPanel';
-// import api from './services/api';
-// import toast from 'react-hot-toast';
-// import { motion, AnimatePresence } from 'framer-motion';
-
-// // Match this with AuthContext and AppStateContext for dev mode
-// const DEV_MODE_BYPASS_AUTH = true; // Set to true to bypass login and use fake user/session
+// // For this Version 1:
+// // - AuthContext.jsx should have BYPASS_AUTH_FOR_DEVELOPMENT = true
+// // - AppStateContext.jsx should have INITIALIZE_WITH_DEV_SESSION = true
+// // - api.js should have DEV_MODE_MOCK_API = true
 
 // function App() {
-//     const { token, user, loading: authLoadingFromContext, logout, setUser: setAuthUser, setToken: setAuthToken } = useAuth();
+//     const { 
+//         token, 
+//         user, 
+//         loading: authLoading, 
+//         logout,
+//         isTestingMode // This flag comes from AuthContext (BYPASS_AUTH_FOR_DEVELOPMENT)
+//     } = useAuth();
+
 //     const { 
 //         theme, 
-//         // selectedLLM, // selectedLLM is now managed by LLMSelectionModal and TopNav directly via AppStateContext
-//         isLeftPanelOpen, setIsLeftPanelOpen, // Assuming these are still needed for App level control if any
-//         isRightPanelOpen, setIsRightPanelOpen, // Or if TopNav manages them via context directly
-//         currentSessionId, setSessionId: setGlobalSessionId 
+//         isLeftPanelOpen, 
+//         isRightPanelOpen, 
+//         currentSessionId, 
+//         setSessionId: setGlobalSessionId 
 //     } = useAppState();
     
-//     // Local loading state for App component's own async operations or initial setup
-//     const [appInitializing, setAppInitializing] = useState(true);
-//     const [showAuthModal, setShowAuthModal] = useState(false);
+//     const [appInitializing, setAppInitializing] = useState(true); 
+//     const [showAuthModal, setShowAuthModal] = useState(false); 
 //     const [messages, setMessages] = useState([]);
-//     const [chatStatus, setChatStatus] = useState('Ready. Send a message to start!');
+//     const [chatStatus, setChatStatus] = useState('Ready.');
 //     const [orchestratorStatus, setOrchestratorStatus] = useState({ status: "loading", message: "Connecting..." });
+//     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-//     // Initialize theme
 //     useEffect(() => {
-//         if (theme === 'dark') {
-//             document.documentElement.classList.add('dark');
-//         } else {
-//             document.documentElement.classList.remove('dark');
-//         }
-//         // Add/remove theme class from body as well for global styles if needed
-//         document.body.className = ''; // Clear previous theme classes
-//         document.body.classList.add(theme); // Add current theme class (e.g., 'dark' or 'light')
+//         const rootHtmlElement = document.documentElement;
+//         rootHtmlElement.classList.remove('light', 'dark');
+//         rootHtmlElement.classList.add(theme);
+//         document.body.className = ''; 
+//         document.body.classList.add(theme === 'dark' ? 'bg-background-dark' : 'bg-background-light');
+//         console.log("App.jsx: Theme applied -", theme);
 //     }, [theme]);
 
-
-//     // Auth and Session Initialization Logic
 //     useEffect(() => {
-//         if (DEV_MODE_BYPASS_AUTH) {
-//             // AuthContext already provides fake token/user if DEV_MODE_BYPASS_AUTH is true in AuthContext.
-//             // AppStateContext already provides fake session if DEV_MODE_BYPASS_AUTH is true in AppStateContext.
-//             // Here we just ensure App.jsx acknowledges this state.
-//             console.log("DEV_MODE: App.jsx recognizing bypassed auth.");
-//             if (!currentSessionId) { // If AppStateContext didn't set a dev session, set one here.
-//                  setGlobalSessionId('dev-session-appjsx-123');
-//             }
-//             setAppInitializing(false);
-//             setShowAuthModal(false); // Explicitly ensure modal is not shown
-//             return;
-//         }
-
-//         // Real auth flow
-//         if (authLoadingFromContext) {
-//             setAppInitializing(true); // Still initializing if AuthContext is loading
-//             return;
-//         }
-
-//         if (!token) { // No token, needs login
-//             setShowAuthModal(true);
-//             setAppInitializing(false);
-//         } else { // Token exists
-//             setShowAuthModal(false);
-//             if (!currentSessionId) { // Token exists, but no session ID found
-//                 api.startNewSession().then(data => {
-//                     setGlobalSessionId(data.sessionId);
-//                 }).catch(err => {
-//                     toast.error("Failed to start a new session. Please try logging in again.");
-//                     console.error(err);
-//                     // Consider logging out if session start fails critically
-//                     // logout(); 
-//                     // setShowAuthModal(true);
-//                 });
-//             }
-//             setAppInitializing(false);
-//         }
-//     }, [token, authLoadingFromContext, currentSessionId, setGlobalSessionId, logout, setAuthToken, setAuthUser ]);
-
-
-//     // Fetch orchestrator status
-//     useEffect(() => {
-//         const fetchStatus = async () => {
-//             const statusData = await api.getOrchestratorStatus();
-//             setOrchestratorStatus(statusData);
-//         };
-//         fetchStatus();
-//         const intervalId = setInterval(fetchStatus, 20000);
-//         return () => clearInterval(intervalId);
-//     }, []);
-
-//     // Fetch chat history when session ID or token changes (and both are present)
-//     const fetchChatHistory = useCallback(async (sid) => {
-//         if (!sid || !token) {
-//             setMessages([]);
-//             setChatStatus("Login or start a new chat.");
-//             return;
-//         }
-//         setChatStatus("Loading history...");
-//         try {
-//             const historyData = await api.getChatHistory(sid);
-//             const formattedMessages = (Array.isArray(historyData) ? historyData : []).map(msg => ({
-//                 id: msg.id || msg._id || String(Math.random()),
-//                 sender: msg.role === 'model' ? 'bot' : 'user',
-//                 text: msg.parts && msg.parts.length > 0 ? msg.parts[0].text : (msg.text || ''),
-//                 thinking: msg.thinking,
-//                 references: msg.references || [],
-//                 timestamp: msg.timestamp,
-//                 source_pipeline: msg.source_pipeline
-//             }));
-//             setMessages(formattedMessages);
-//             setChatStatus(formattedMessages.length > 0 ? "History loaded." : "New chat. Send a message!");
-//         } catch (error) {
-//             toast.error(`Failed to load chat history: ${error.message}`);
-//             setChatStatus("Error loading history.");
-//             console.error("Failed to load chat history:", error);
-//         }
-//     }, [token]); // Removed sid from dependencies to call it explicitly
-
-//     useEffect(() => {
-//         if (currentSessionId && token) {
-//             fetchChatHistory(currentSessionId);
-//         } else if (!token) {
-//             setMessages([]); // Clear messages if logged out
-//             setChatStatus("Please login.");
-//         }
-//     }, [currentSessionId, token, fetchChatHistory]);
-
-
-//     const handleAuthSuccess = (authData) => {
-//         setShowAuthModal(false);
-//         // AuthContext's login/signup should have set the token and user.
-//         // App.js needs to set the session ID obtained from login/signup.
-//         if (authData.sessionId) {
-//             setGlobalSessionId(authData.sessionId);
-//              // Fetch history for this new session
-//             fetchChatHistory(authData.sessionId);
-//         } else {
-//             // If no sessionId from auth, start a new one
-//             api.startNewSession().then(data => {
-//                 setGlobalSessionId(data.sessionId);
-//                 fetchChatHistory(data.sessionId);
-//             }).catch(err => toast.error("Failed to initialize session after login."));
-//         }
-//          // Ensure user object is fully populated in AuthContext if authData has more details
-//         if(authData.username && authData._id && authData.token){
-//             // setAuthToken(authData.token); // AuthContext should do this from login/signup
-//             setAuthUser({username: authData.username, id: authData._id});
-//         }
-//     };
-    
-//     const handleLogoutAndShowModal = () => {
-//         logout(); // This clears token and user in AuthContext
-//         setGlobalSessionId(null); // Clear session in AppStateContext
-//         localStorage.removeItem('aiTutorSessionId'); // Explicitly clear from localStorage too
-//         setMessages([]);
-//         setShowAuthModal(true); // Trigger AuthModal display
-//         toast.success("Logged out successfully.");
-//     };
-
-//     const handleNewChat = async () => {
-//         try {
-//             const data = await api.startNewSession();
-//             setGlobalSessionId(data.sessionId);
-//             setMessages([]);
-//             setChatStatus("New chat started. Send a message!");
-//             toast.success("New chat started!");
-//         } catch (error) {
-//             toast.error("Failed to start new chat.");
-//             console.error("Failed to start new chat:", error);
-//         }
-//     };
-
-//     // This is the initial loading state for the entire app before we know if we show AuthModal or main app
-//     if (appInitializing && !DEV_MODE_BYPASS_AUTH) { 
-//         return (
-//             <div className="fixed inset-0 flex items-center justify-center bg-background-light dark:bg-background-dark">
-//                 <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary"></div>
-//                 <p className="ml-4 text-xl text-text-light dark:text-text-dark">Initializing App...</p>
-//             </div>
-//         );
-//     }
-
-//     return (
-//         <div className={`flex flex-col h-screen overflow-hidden font-sans ${theme}`}>
-//             <AnimatePresence>
-//                 {showAuthModal && !token && ( // Show modal only if no token and dev bypass is off
-//                     <AuthModal isOpen={showAuthModal} onClose={handleAuthSuccess} />
-//                 )}
-//             </AnimatePresence>
-
-//             {/* Render main app content if token exists (or dev bypass is on and user is set) */}
-//             {(token && user) && (
-//                 <>
-//                     <TopNav
-//                         user={user} // User from AuthContext
-//                         onLogout={handleLogoutAndShowModal}
-//                         onNewChat={handleNewChat}
-//                         onHistoryClick={() => toast.info("History feature coming soon!")}
-//                         orchestratorStatus={orchestratorStatus}
-//                         // Panel toggle props for TopNav to control App's panel state:
-//                         isLeftPanelOpen={isLeftPanelOpen}
-//                         toggleLeftPanel={() => setIsLeftPanelOpen(prev => !prev)}
-//                         isRightPanelOpen={isRightPanelOpen}
-//                         toggleRightPanel={() => setIsRightPanelOpen(prev => !prev)}
-//                     />
-//                     <div className="flex flex-1 overflow-hidden pt-16"> {/* pt-16 for fixed TopNav height */}
-//                         <AnimatePresence>
-//                         {isLeftPanelOpen && (
-//                             <motion.aside 
-//                                 key="left-panel"
-//                                 initial={{ x: '-100%', opacity: 0 }}
-//                                 animate={{ x: '0%', opacity: 1 }}
-//                                 exit={{ x: '-100%', opacity: 0 }}
-//                                 transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-//                                 className="w-full md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
-//                             >
-//                                 <LeftPanel />
-//                             </motion.aside>
-//                         )}
-//                         </AnimatePresence>
-
-//                         <main className="flex-1 flex flex-col overflow-hidden p-1 sm:p-2 md:p-4">
-//                            <CenterPanel 
-//                                 messages={messages} 
-//                                 setMessages={setMessages} 
-//                                 currentSessionId={currentSessionId}
-//                                 chatStatus={chatStatus}
-//                                 setChatStatus={setChatStatus}
-//                             />
-//                         </main>
-
-//                         <AnimatePresence>
-//                         {isRightPanelOpen && (
-//                             <motion.aside 
-//                                 key="right-panel"
-//                                 initial={{ x: '100%', opacity: 0 }}
-//                                 animate={{ x: '0%', opacity: 1 }}
-//                                 exit={{ x: '100%', opacity: 0 }}
-//                                 transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-//                                 className="hidden md:block md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
-//                             >
-//                                 <RightPanel />
-//                             </motion.aside>
-//                         )}
-//                         </AnimatePresence>
-//                     </div>
-//                 </>
-//             )}
-//         </div>
-//     );
-// }
-
-// export default App;
-
-// import React, { useState, useEffect, useCallback } from 'react';
-// import { useAuth } from './hooks/useAuth';
-// import { useAppState } from './contexts/AppStateContext';
-// import AuthModal from './components/auth/AuthModal';
-// import TopNav from './components/layout/TopNav';
-// import LeftPanel from './components/layout/LeftPanel';
-// import CenterPanel from './components/layout/CenterPanel';
-// import RightPanel from './components/layout/RightPanel';
-// import api from './services/api';
-// import toast from 'react-hot-toast';
-// import { motion, AnimatePresence } from 'framer-motion';
-
-// // Match this with AuthContext and AppStateContext for dev mode
-// const DEV_MODE_BYPASS_AUTH = true; 
-
-// function App() {
-//     const { token, user, loading: authLoadingFromContext, logout, setUser: setAuthUser } = useAuth();
-//     const { 
-//         theme, 
-//         isLeftPanelOpen, // Only need to read from context for rendering
-//         isRightPanelOpen, // Only need to read from context for rendering
-//         currentSessionId, setSessionId: setGlobalSessionId 
-//     } = useAppState();
-    
-//     const [appInitializing, setAppInitializing] = useState(true);
-//     const [showAuthModal, setShowAuthModal] = useState(false);
-//     const [messages, setMessages] = useState([]);
-//     const [chatStatus, setChatStatus] = useState('Ready. Send a message to start!');
-//     const [orchestratorStatus, setOrchestratorStatus] = useState({ status: "loading", message: "Connecting..." });
-
-//     // Initialize theme class on <html> and <body>
-//     useEffect(() => {
-//         const root = document.documentElement;
-//         const body = document.body;
-//         if (theme === 'dark') {
-//             root.classList.add('dark');
-//             body.classList.add('dark'); // Optional: if body needs explicit dark class
-//             body.classList.remove('light');
-//         } else {
-//             root.classList.remove('dark');
-//             body.classList.add('light'); // Optional
-//             body.classList.remove('dark');
-//         }
-//     }, [theme]);
-
-//     // Auth and Session Initialization Logic
-//     useEffect(() => {
-//         if (DEV_MODE_BYPASS_AUTH) {
-//             console.log("DEV_MODE: App.jsx recognizing bypassed auth.");
-//             if (!currentSessionId && user) { // Ensure session is set if user is dev-mode set
-//                  setGlobalSessionId('dev-session-appjsx-123');
-//             }
-//             setAppInitializing(false);
-//             setShowAuthModal(false);
-//             return;
-//         }
-
-//         if (authLoadingFromContext) {
+//         console.log("App.jsx Auth Effect: authLoading:", authLoading, "isTestingMode:", isTestingMode, "Token:", token, "User:", user);
+//         if (authLoading) {
 //             setAppInitializing(true);
 //             return;
 //         }
 
-//         if (!token) {
-//             setShowAuthModal(true);
-//             setAppInitializing(false);
-//         } else {
+//         if (isTestingMode && user && token) {
+//             console.log("App.jsx: Auth Bypassed by Context. User:", user);
 //             setShowAuthModal(false);
 //             if (!currentSessionId) {
-//                 api.startNewSession().then(data => {
-//                     setGlobalSessionId(data.sessionId);
-//                 }).catch(err => {
-//                     toast.error("Session init failed. Try login.");
-//                     console.error(err);
-//                     // logout(); // Consider forcing logout if session init is critical
-//                 });
+//                 const devSession = localStorage.getItem('aiTutorSessionId') || `dev-main-app-session-${Date.now()}`;
+//                 setGlobalSessionId(devSession);
+//                 console.log("App.jsx: Initializing dev session:", devSession);
 //             }
-//             setAppInitializing(false);
+//         } else if (!token) {
+//             console.log("App.jsx: No token, showing AuthModal.");
+//             setShowAuthModal(true);
+//         } else { 
+//             console.log("App.jsx: Token exists, user authenticated (or will be shortly).");
+//             setShowAuthModal(false);
+//             if (user && !currentSessionId) { // User object is set, but no session yet
+//                 api.startNewSession().then(data => setGlobalSessionId(data.sessionId));
+//             }
 //         }
-//     }, [token, user, authLoadingFromContext, currentSessionId, setGlobalSessionId, logout]);
+//         setAppInitializing(false);
+//     }, [token, user, authLoading, currentSessionId, setGlobalSessionId, isTestingMode]);
 
-//     // Fetch orchestrator status
-//     useEffect(() => {
-//         const fetchStatus = async () => {
-//             const statusData = await api.getOrchestratorStatus();
-//             setOrchestratorStatus(statusData);
-//         };
-//         fetchStatus();
-//         const intervalId = setInterval(fetchStatus, 20000);
-//         return () => clearInterval(intervalId);
+//     useEffect(() => { 
+//         api.getOrchestratorStatus().then(setOrchestratorStatus);
+//         // Interval removed for brevity in this version, can be added back if needed
 //     }, []);
 
-//     // Fetch chat history
 //     const fetchChatHistory = useCallback(async (sid) => {
-//         if (!sid || !token) {
-//             setMessages([]);
-//             setChatStatus(token ? "Start a new chat or select one." : "Please login.");
-//             return;
+//         if (!sid || (!token && !isTestingMode)) {
+//              setMessages([]); 
+//              setChatStatus( (token || isTestingMode) ? "Select or start a chat." : "Please login.");
+//              return; 
 //         }
-//         setChatStatus("Loading history...");
+//         setChatStatus("Loading mock history...");
 //         try {
-//             const historyData = await api.getChatHistory(sid);
+//             const historyData = await api.getChatHistory(sid); // Mocked call
 //             const formattedMessages = (Array.isArray(historyData) ? historyData : []).map(msg => ({
-//                 id: msg.id || msg._id || String(Math.random()),
-//                 sender: msg.role === 'model' ? 'bot' : 'user',
-//                 text: msg.parts && msg.parts.length > 0 ? msg.parts[0].text : (msg.text || ''),
-//                 thinking: msg.thinking,
-//                 references: msg.references || [],
-//                 timestamp: msg.timestamp,
+//                 id: msg.id || msg._id || String(Math.random() + Date.now()),
+//                 sender: msg.sender || (msg.role === 'model' ? 'bot' : 'user'),
+//                 text: msg.parts?.[0]?.text || msg.text || '',
+//                 thinking: msg.thinking, references: msg.references || [],
+//                 timestamp: msg.timestamp || new Date().toISOString(),
 //                 source_pipeline: msg.source_pipeline
 //             }));
 //             setMessages(formattedMessages);
-//             setChatStatus(formattedMessages.length > 0 ? "History loaded." : "New chat. Send a message!");
+//             setChatStatus(formattedMessages.length > 0 ? "Mock history loaded." : "Chat empty.");
 //         } catch (error) {
-//             toast.error(`Failed to load chat history: ${error.message}`);
-//             setChatStatus("Error loading history.");
-//             console.error("Failed to load chat history:", error);
+//             toast.error("Mock history load failed (check api.js mocks).");
+//             setChatStatus("Error loading mock history.");
 //         }
-//     }, [token]); // Dependency on token
+//     }, [token, isTestingMode]); 
 
 //     useEffect(() => {
-//         if (currentSessionId && token) {
+//         if (currentSessionId && (token || isTestingMode)) { // Check isTestingMode too for bypassed auth
 //             fetchChatHistory(currentSessionId);
-//         } else if (!token) {
-//             setMessages([]);
-//             setChatStatus("Please login.");
 //         }
-//     }, [currentSessionId, token, fetchChatHistory]);
+//     }, [currentSessionId, token, isTestingMode, fetchChatHistory]);
 
 //     const handleAuthSuccess = (authData) => {
 //         setShowAuthModal(false);
-//         if (authData.sessionId) {
-//             setGlobalSessionId(authData.sessionId);
-//             fetchChatHistory(authData.sessionId); // Fetch history for newly assigned session
-//         } else {
-//             api.startNewSession().then(data => { // Fallback to start new session
-//                 setGlobalSessionId(data.sessionId);
-//                 fetchChatHistory(data.sessionId);
-//             }).catch(err => toast.error("Failed to initialize session after login."));
+//         if (authData?.sessionId) setGlobalSessionId(authData.sessionId);
+//         else if (token && !currentSessionId) { // Fallback
+//              api.startNewSession().then(data => setGlobalSessionId(data.sessionId));
 //         }
-//         if(authData.username && authData._id){ // Ensure user in AuthContext is updated
-//             setAuthUser({username: authData.username, id: authData._id});
-//         }
+//         // User state is managed by AuthContext
 //     };
     
-//     const handleLogoutAndShowModal = () => {
+//     const handleLogout = () => {
 //         logout(); 
 //         setGlobalSessionId(null);
-//         localStorage.removeItem('aiTutorSessionId'); 
 //         setMessages([]);
-//         if (!DEV_MODE_BYPASS_AUTH) { // Only show modal if not in full bypass mode
-//              setShowAuthModal(true); 
-//         } else {
-//             // In full bypass, logout might mean 'clear dev state and show modal anyway'
-//             // Or, to truly "logout" from dev mode, user would change the DEV_MODE_BYPASS_AUTH flag and refresh.
-//             // For a UI-testable "logout" in dev mode that shows the modal:
-//             // setAuthUser(null); // This would make the `token && user` condition false
-//             // setAuthToken(null); // This would make the `token && user` condition false
-//             // setShowAuthModal(true); // This is now handled by the useEffect
-//              console.log("DEV_MODE: Logged out. Set DEV_MODE_BYPASS_AUTH=false and refresh to see AuthModal, or handle dev logout differently.");
-//         }
-//         toast.success("Logged out successfully.");
+//         if (!isTestingMode) setShowAuthModal(true); 
+//         else console.log("App.jsx (V1): Mock logout. To see AuthModal, disable bypass in AuthContext.");
+//         toast.success("Logged out (mock).");
 //     };
 
-//     const handleNewChat = async () => {
-//         try {
-//             const data = await api.startNewSession();
-//             setGlobalSessionId(data.sessionId); // This will trigger useEffect to fetch history (empty)
-//             setMessages([]); // Explicitly clear messages for immediate UI update
-//             setChatStatus("New chat started. Send a message!");
-//             toast.success("New chat started!");
-//         } catch (error) {
-//             toast.error("Failed to start new chat.");
-//             console.error("Failed to start new chat:", error);
-//         }
+//     const handleNewChat = async () => { 
+//         const data = await api.startNewSession(); // Mocked
+//         setGlobalSessionId(data.sessionId);
+//         setMessages([]); 
+//         setChatStatus("New mock chat!");
+//         toast.success("New mock chat started!");
 //     };
 
-//     if (appInitializing && (!DEV_MODE_BYPASS_AUTH || authLoadingFromContext)) { 
+//     const handleSelectSessionFromHistory = (sessionId) => {
+//         if (sessionId) setGlobalSessionId(sessionId);
+//         setIsHistoryModalOpen(false); 
+//     };
+
+//     if (appInitializing || (authLoading && !isTestingMode)) { 
 //         return (
-//             <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+//             <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-dark text-text-dark">
 //                 <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary mb-4"></div>
 //                 <p className="text-xl">Initializing AI Tutor...</p>
 //             </div>
 //         );
 //     }
 
+//     // Determine if main app should render based on auth state (bypassed or real)
+//     const canRenderMainApp = (isTestingMode && user && token) || (!isTestingMode && user && token);
+
 //     return (
 //         <div className={`flex flex-col h-screen overflow-hidden font-sans ${theme}`}>
 //             <AnimatePresence>
-//                 {showAuthModal && !token && (
-//                     <AuthModal isOpen={showAuthModal} onClose={handleAuthSuccess} />
+//                 {!canRenderMainApp && showAuthModal && ( // Show AuthModal if not authenticated and not bypassed
+//                     <AuthModal isOpen={true} onClose={handleAuthSuccess} />
 //                 )}
 //             </AnimatePresence>
 
-//             {(token && user) && ( // Main application UI rendered if authenticated
+//             {canRenderMainApp && (
 //                 <>
 //                     <TopNav
 //                         user={user}
-//                         onLogout={handleLogoutAndShowModal}
+//                         onLogout={handleLogout}
 //                         onNewChat={handleNewChat}
-//                         onHistoryClick={() => toast.info("History feature coming soon!")}
+//                         onHistoryClick={() => setIsHistoryModalOpen(true)}
 //                         orchestratorStatus={orchestratorStatus}
-//                         // TopNav now uses useAppState for panel toggles, so no props needed here for that
 //                     />
-//                     <div className="flex flex-1 overflow-hidden pt-16 bg-background-light dark:bg-background-dark"> {/* pt-16 for fixed TopNav height */}
-//                         <AnimatePresence>
-//                         {isLeftPanelOpen && (
-//                             <motion.aside 
-//                                 key="left-panel"
-//                                 initial={{ x: '-100%', opacity: 0 }}
-//                                 animate={{ x: '0%', opacity: 1 }}
-//                                 exit={{ x: '-100%', opacity: 0 }}
-//                                 transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.3 }}
-//                                 className="w-full md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
-//                             >
-//                                 <LeftPanel />
-//                             </motion.aside>
-//                         )}
+//                     <div className="flex flex-1 overflow-hidden pt-16 bg-background-light dark:bg-background-dark">
+//                         <AnimatePresence mode="wait">
+//                             {isLeftPanelOpen ? (
+//                                 <motion.aside 
+//                                     key="left-panel-main"
+//                                     initial={{ x: '-100%', opacity: 0 }}
+//                                     animate={{ x: '0%', opacity: 1 }}
+//                                     exit={{ x: '-100%', opacity: 0 }}
+//                                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+//                                     className="w-full md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
+//                                 >
+//                                     <LeftPanel /> 
+//                                 </motion.aside>
+//                             ) : (
+//                                 <LeftCollapsedNav />
+//                             )}
 //                         </AnimatePresence>
-
-//                         <main className="flex-1 flex flex-col overflow-hidden p-1 sm:p-2 md:p-4">
+                        
+//                         <main className={`flex-1 flex flex-col overflow-hidden p-1 sm:p-2 md:p-4 
+//                                          transition-all duration-300 ease-in-out
+//                                          ${isLeftPanelOpen ? 'lg:ml-0' : 'lg:ml-16 md:ml-14'} 
+//                                          ${isRightPanelOpen ? 'lg:mr-0' : 'lg:mr-16 md:mr-14'}`}>
 //                            <CenterPanel 
 //                                 messages={messages} 
 //                                 setMessages={setMessages} 
@@ -738,153 +206,39 @@
 //                             />
 //                         </main>
 
-//                         <AnimatePresence>
-//                         {isRightPanelOpen && (
-//                             <motion.aside 
-//                                 key="right-panel"
-//                                 initial={{ x: '100%', opacity: 0 }}
-//                                 animate={{ x: '0%', opacity: 1 }}
-//                                 exit={{ x: '100%', opacity: 0 }}
-//                                 transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.3 }}
-//                                 className="hidden md:block md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
-//                             >
-//                                 <RightPanel />
-//                             </motion.aside>
-//                         )}
+//                         <AnimatePresence mode="wait">
+//                             {isRightPanelOpen ? (
+//                                 <motion.aside 
+//                                     key="right-panel-main"
+//                                     initial={{ x: '100%', opacity: 0 }}
+//                                     animate={{ x: '0%', opacity: 1 }}
+//                                     exit={{ x: '100%', opacity: 0 }}
+//                                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+//                                     className="hidden md:flex md:flex-col md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-l border-border-light dark:border-border-dark overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
+//                                 >
+//                                     <RightPanel />
+//                                 </motion.aside>
+//                             ) : (
+//                                 <RightCollapsedNav />
+//                             )}
 //                         </AnimatePresence>
 //                     </div>
-//                 </>
-//             )}
-//             {/* Fallback if not loading and not authenticated (and not in dev bypass mode) */}
-//             { !appInitializing && !token && !DEV_MODE_BYPASS_AUTH && !showAuthModal && (
-//                  <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-//                      <p className="text-xl">Please <button onClick={()=> setShowAuthModal(true)} className="text-primary underline">log in</button> to continue.</p>
-//                  </div>
-//             )}
-//         </div>
-//     );
-// }
-
-// export default App;
-
-// import React, { useState, useEffect, useCallback } from 'react';
-// import { useAuth } from './hooks/useAuth';
-// import { useAppState } from './contexts/AppStateContext';
-// import AuthModal from './components/auth/AuthModal';
-// import TopNav from './components/layout/TopNav';
-// // ... other imports ...
-// import toast from 'react-hot-toast';
-// // ...
-
-// // Set this to FALSE if you want to see the AuthModal first
-// // const DEV_MODE_BYPASS_AUTH = false; // Or remove this App.jsx specific flag
-
-// function App() {
-//     // Get DEV_MODE_ALLOW_DEV_LOGIN from AuthContext if you want to use it for other dev features
-//     const { token, user, loading: authLoading, logout, setUser: setAuthUser, DEV_MODE_ALLOW_DEV_LOGIN } = useAuth(); 
-//     const { 
-//         theme, 
-//         isLeftPanelOpen, isRightPanelOpen, 
-//         currentSessionId, setSessionId: setGlobalSessionId 
-//     } = useAppState();
-    
-//     const [appInitializing, setAppInitializing] = useState(true); // Still useful for initial data fetches
-//     const [showAuthModal, setShowAuthModal] = useState(false);
-//     // ... other states ...
-
-//     // Theme initialization (as before)
-//     useEffect(() => { /* ... */ }, [theme]);
-
-//     // Auth and Session Initialization Logic
-//     useEffect(() => {
-//         // This effect now primarily handles showing the auth modal if not authenticated,
-//         // and initializing session if authenticated.
-//         if (authLoading) { // If AuthContext is still figuring out token/user
-//             setAppInitializing(true);
-//             return;
-//         }
-
-//         if (!token) { // No token means user is not logged in
-//             setShowAuthModal(true);
-//             setAppInitializing(false);
-//         } else { // Token exists, user is considered logged in
-//             setShowAuthModal(false); // Ensure modal is closed
-//             // If user is logged in but no session ID exists, try to start one
-//             if (!currentSessionId) { 
-//                 api.startNewSession().then(data => {
-//                     setGlobalSessionId(data.sessionId);
-//                 }).catch(err => {
-//                     toast.error("Session init failed. Try login.");
-//                     console.error(err);
-//                 });
-//             }
-//             setAppInitializing(false);
-//         }
-//     }, [token, authLoading, currentSessionId, setGlobalSessionId]);
-
-//     // ... (fetchOrchestratorStatus, fetchChatHistory as before) ...
-
-//     const handleAuthSuccess = (authData) => {
-//         // This function is called by AuthModal on successful login/signup/devLogin
-//         setShowAuthModal(false);
-//         // AuthContext should have already updated token and user.
-//         // App.jsx just needs to handle the sessionId.
-//         if (authData && authData.sessionId) {
-//             setGlobalSessionId(authData.sessionId);
-//             // fetchChatHistory will be triggered by useEffect watching currentSessionId & token
-//         } else if (token) { // If authData didn't provide sessionId but we are now logged in
-//              api.startNewSession().then(data => {
-//                 setGlobalSessionId(data.sessionId);
-//             }).catch(err => toast.error("Failed to init session."));
-//         }
-//          // Update user in AuthContext if authData provides more details than parseToken
-//         if(authData && authData.username && authData._id && token){ // Ensure token is also set
-//             setAuthUser({username: authData.username, id: authData._id});
-//         }
-//     };
-    
-//     const handleLogoutAndShowModal = () => {
-//         logout(); 
-//         setGlobalSessionId(null);
-//         localStorage.removeItem('aiTutorSessionId'); 
-//         setMessages([]);
-//         setShowAuthModal(true); // Explicitly show modal after logout
-//         toast.success("Logged out successfully.");
-//     };
-
-//     // ... (handleNewChat as before) ...
-
-//     // Initial App Loader
-//     if (appInitializing) { 
-//         return ( /* ... loading spinner as before ... */ );
-//     }
-
-//     return (
-//         <div className={`flex flex-col h-screen overflow-hidden font-sans ${theme}`}>
-//             <AnimatePresence>
-//                 {showAuthModal && !token && ( // Show modal if flag is true AND no token
-//                     <AuthModal 
-//                         isOpen={showAuthModal} 
-//                         onClose={handleAuthSuccess} // Pass a callback to close modal & update state
+                    
+//                     <ChatHistoryModal
+//                         isOpen={isHistoryModalOpen}
+//                         onClose={() => setIsHistoryModalOpen(false)}
+//                         onSelectSession={handleSelectSessionFromHistory}
 //                     />
-//                 )}
-//             </AnimatePresence>
-
-//             {(token && user) && ( // Main application UI
-//                 <>
-//                     {/* ... TopNav, Panels as before ... */}
 //                 </>
 //             )}
-//             {/* Fallback if not loading, no token, and modal isn't showing (should be rare) */}
-//             {!appInitializing && !token && !showAuthModal && (
-//                  <div className="fixed inset-0 flex items-center justify-center">
-//                      <p>Please <button onClick={()=> {
-//                          setShowAuthModal(true);
-//                          // Also ensure AppStateContext dev session is cleared if we are showing login
-//                          if (DEV_MODE_ALLOW_DEV_LOGIN && currentSessionId && currentSessionId.startsWith('dev-session')) {
-//                             setGlobalSessionId(null);
-//                          }
-//                         }} className="text-primary underline">log in</button> to continue.</p>
+            
+//             {/* Fallback for unexpected state where app is not initializing, user not logged in, and modal isn't forced */}
+//             { !appInitializing && !canRenderMainApp && !showAuthModal && (
+//                  <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+//                      <p className="text-xl">Error in application state. Please <button 
+//                         onClick={()=> { setShowAuthModal(true); }} 
+//                         className="text-primary hover:underline font-semibold"
+//                         >try logging in</button>.</p>
 //                  </div>
 //             )}
 //         </div>
@@ -892,210 +246,216 @@
 // }
 
 // export default App;
+
+
+
+
+
+
+
+
+
+
+
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from './hooks/useAuth';
-import { useAppState } from './contexts/AppStateContext';
-import AuthModal from './components/auth/AuthModal';
-import TopNav from './components/layout/TopNav';
-import LeftPanel from './components/layout/LeftPanel';
-import CenterPanel from './components/layout/CenterPanel';
-import RightPanel from './components/layout/RightPanel';
-import api from './services/api';
+import { useAuth } from './hooks/useAuth.jsx';
+import { useAppState } from './contexts/AppStateContext.jsx';
+import AuthModal from './components/auth/AuthModal.jsx';
+import TopNav from './components/layout/TopNav.jsx';
+import LeftPanel from './components/layout/LeftPanel.jsx';
+import CenterPanel from './components/layout/CenterPanel.jsx';
+import RightPanel from './components/layout/RightPanel.jsx';
+import LeftCollapsedNav from './components/layout/LeftCollapsedNav.jsx';
+import RightCollapsedNav from './components/layout/RightCollapsedNav.jsx';
+import ChatHistoryModal from './components/chat/ChatHistoryModal.jsx';
+import api from './services/api.js'; // This will use MOCKED API if api.js is set to DEV_MODE_MOCK_API = true
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Set this consistently across AuthContext, AppStateContext, and App.jsx for dev mode
-const DEV_MODE_BYPASS_AUTH = true; 
 
 function App() {
     const { 
         token, 
         user, 
-        loading: authLoadingFromContext, 
+        loading: authLoadingFromContext, // Renamed to avoid conflict with appInitializing
         logout, 
-        setUser: setAuthUser, 
-        // setToken: setAuthToken // We usually let AuthContext manage token setting via login/logout
+        setUser: setAuthUser, // From AuthContext, to update user details if login response has more
     } = useAuth();
 
     const { 
         theme, 
-        isLeftPanelOpen, // AppStateContext manages this state
-        isRightPanelOpen, // AppStateContext manages this state
+        isLeftPanelOpen, 
+        isRightPanelOpen, 
         currentSessionId, 
         setSessionId: setGlobalSessionId 
     } = useAppState();
     
-    // Local loading state for App component's own async operations or initial setup
-    const [appInitializing, setAppInitializing] = useState(true);
+    // Local state for App.jsx's own initialization step AFTER AuthContext is ready
+    const [appInitializing, setAppInitializing] = useState(true); 
     const [showAuthModal, setShowAuthModal] = useState(false); // Controls AuthModal visibility
     const [messages, setMessages] = useState([]);
     const [chatStatus, setChatStatus] = useState('Ready. Send a message to start!');
     const [orchestratorStatus, setOrchestratorStatus] = useState({ status: "loading", message: "Connecting..." });
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-    // Initialize theme class on <html> and <body>
+    // Effect to apply Tailwind dark/light mode class to HTML element
     useEffect(() => {
         const rootHtmlElement = document.documentElement;
-        const bodyElement = document.body; // If you need body-specific classes too
-        if (theme === 'dark') {
-            rootHtmlElement.classList.add('dark');
-            // bodyElement.classList.add('dark-theme-body'); // Example
-        } else {
-            rootHtmlElement.classList.remove('dark');
-            // bodyElement.classList.remove('dark-theme-body');
-        }
-        // For more complex body theming, you might set a data-theme attribute
-        // bodyElement.setAttribute('data-theme', theme);
+        rootHtmlElement.classList.remove('light', 'dark'); // Clear previous
+        rootHtmlElement.classList.add(theme); // Add current
+        // Optional: If you have body-specific theme styles for elements not covered by Tailwind's dark: prefix
+        document.body.className = ''; 
+        document.body.classList.add(theme === 'dark' ? 'bg-background-dark' : 'bg-background-light');
+        console.log("App.jsx: Theme effect, theme is:", theme);
     }, [theme]);
 
-
-    // Auth and Session Initialization Logic
+    // Effect to handle initial authentication status and session setup
     useEffect(() => {
-        if (DEV_MODE_BYPASS_AUTH) {
-            // In dev bypass mode, AuthContext and AppStateContext should already provide
-            // devUser, devToken, and devSessionId.
-            // App.jsx just needs to ensure it's not stuck in an initializing state.
-            console.log("DEV_MODE (App.jsx): Bypassing auth, user/token should be set by AuthContext.");
-            if (user && token && !currentSessionId) { // If dev user/token set, but no dev session
-                 setGlobalSessionId('dev-session-appjsx-ensure-123'); // Ensure a session ID
-            }
-            setAppInitializing(false); // Bypass complete
-            setShowAuthModal(false);   // Don't show auth modal
-            return;
-        }
-
-        // Real auth flow (if DEV_MODE_BYPASS_AUTH is false)
+        console.log("App.jsx: Auth/Session useEffect. authLoading:", authLoadingFromContext, "Token:", token, "User:", user, "SessionId:", currentSessionId);
         if (authLoadingFromContext) {
-            setAppInitializing(true); // Still initializing if AuthContext is checking token
+            console.log("App.jsx: AuthContext is loading. App initializing...");
+            setAppInitializing(true); // Show app loader while AuthContext determines auth state
             return;
         }
 
-        if (!token) { // No token means user is not logged in (AuthContext confirmed this)
-            setShowAuthModal(true);   // Prompt for login/signup
-            setAppInitializing(false);
+        // AuthContext has finished its loading
+        console.log("App.jsx: AuthContext finished loading. Token:", token);
+        if (!token) { // No token means user is not logged in
+            console.log("App.jsx: No token. Showing AuthModal.");
+            setShowAuthModal(true);
+            setAppInitializing(false); // Done with this phase of init, modal will show
         } else { // Token exists, user is considered logged in
-            setShowAuthModal(false); // Ensure modal is closed
-            if (!currentSessionId) { // Token exists, but no session ID found in AppStateContext
-                api.startNewSession().then(data => {
-                    setGlobalSessionId(data.sessionId);
-                }).catch(err => {
-                    toast.error("Session initialization failed. Please try logging in again.");
-                    console.error("Session init error after token check:", err);
-                    // Consider if logout is needed here if session is critical
-                    // logout(); 
-                });
+            console.log("App.jsx: Token exists. Hiding AuthModal. User:", user);
+            setShowAuthModal(false); 
+            // If user is logged in (token exists, user object should be set by AuthContext soon if not already)
+            // AND there's no currentSessionId in AppStateContext, try to get/start one.
+            if (user && !currentSessionId) { 
+                console.log("App.jsx: User authenticated, but no currentSessionId. Starting new session via API.");
+                api.startNewSession() // This will be a MOCKED call in V1
+                    .then(data => {
+                        if (data && data.sessionId) {
+                            setGlobalSessionId(data.sessionId);
+                            console.log("App.jsx: New session started/set from API:", data.sessionId);
+                        } else {
+                            console.error("App.jsx: Mock api.startNewSession did not return sessionId.");
+                            toast.error("Could not initialize session (mock error).");
+                        }
+                    })
+                    .catch(err => {
+                        toast.error("Failed to start new session (mock error).");
+                        console.error("App.jsx: Error starting new session (mock):", err);
+                    });
+            } else if (!user && token) {
+                // This is an edge case: token present, but user object from AuthContext not yet propagated.
+                // AuthContext's useEffect should set the user. We can wait or re-check.
+                console.warn("App.jsx: Token exists, but user object is pending. Waiting for AuthContext to update user.");
+                setAppInitializing(true); // Remain in initializing state until user object is available
+                return; // Skip setting appInitializing to false yet
             }
-            setAppInitializing(false); // Done initializing for authenticated user
+            setAppInitializing(false); // Done with app-level init for authenticated user
         }
-    }, [token, user, authLoadingFromContext, currentSessionId, setGlobalSessionId, logout]);
+    }, [token, user, authLoadingFromContext, currentSessionId, setGlobalSessionId]);
 
 
-    // Fetch orchestrator status (runs regardless of auth state for general app health)
+    // Effect to fetch orchestrator status (uses mocked API in V1)
     useEffect(() => {
-        const fetchStatus = async () => {
-            const statusData = await api.getOrchestratorStatus();
+        api.getOrchestratorStatus().then(statusData => {
             setOrchestratorStatus(statusData);
-        };
-        fetchStatus();
-        const intervalId = setInterval(fetchStatus, 20000); // Check every 20 seconds
-        return () => clearInterval(intervalId);
+            console.log("App.jsx: Orchestrator status fetched (mocked):", statusData);
+        });
+        // Interval for status check can be added later for V2
     }, []);
 
-    // Fetch chat history when session ID or token changes (and both are present)
+    // Effect to fetch chat history when session ID or token changes
     const fetchChatHistory = useCallback(async (sid) => {
-        if (!sid || !token) { // Need both session and token
+        if (!sid || !token) {
             setMessages([]);
-            setChatStatus(token ? "Start or select a chat." : "Please login to see chat history.");
+            setChatStatus(token ? "Start or select a chat." : "Please login.");
             return;
         }
-        setChatStatus("Loading history...");
+        setChatStatus("Loading chat history (mocked)...");
         try {
-            const historyData = await api.getChatHistory(sid); // Token auto-included by API service
+            const historyData = await api.getChatHistory(sid); // Mocked call
             const formattedMessages = (Array.isArray(historyData) ? historyData : []).map(msg => ({
-                id: msg.id || msg._id || String(Math.random() + Date.now()), // Ensure unique key
-                sender: msg.role === 'model' ? 'bot' : 'user',
-                text: msg.parts && msg.parts.length > 0 ? msg.parts[0].text : (msg.text || ''),
-                thinking: msg.thinking,
-                references: msg.references || [],
-                timestamp: msg.timestamp,
+                id: msg.id || msg._id || String(Math.random() + Date.now()),
+                sender: msg.sender || (msg.role === 'model' ? 'bot' : 'user'),
+                text: msg.parts?.[0]?.text || msg.text || '',
+                thinking: msg.thinking, references: msg.references || [],
+                timestamp: msg.timestamp || new Date().toISOString(),
                 source_pipeline: msg.source_pipeline
             }));
             setMessages(formattedMessages);
-            setChatStatus(formattedMessages.length > 0 ? "History loaded." : "Chat is empty. Send a message!");
+            setChatStatus(formattedMessages.length > 0 ? "Mock history loaded." : "Chat is empty (mock).");
         } catch (error) {
-            toast.error(`Failed to load chat history: ${error.message}`);
-            setChatStatus("Error loading history.");
-            console.error("Failed to load chat history:", error);
+            toast.error(`Mock history load failed: ${error.message}`);
+            setChatStatus("Error loading mock history.");
         }
-    }, [token]); // Depends on token to make the API call
+    }, [token]); 
 
     useEffect(() => {
-        // This effect runs when currentSessionId or token changes.
-        // It calls fetchChatHistory if both are present.
         if (currentSessionId && token) {
             fetchChatHistory(currentSessionId);
         } else if (!token) { // If token becomes null (e.g., after logout)
-            setMessages([]); // Clear messages
+            setMessages([]);
             setChatStatus("Please login.");
         }
-        // If token exists but currentSessionId is null, the auth useEffect should handle starting a new session
     }, [currentSessionId, token, fetchChatHistory]);
 
-
-    const handleAuthSuccess = (authData) => { // Called by AuthModal after successful login/signup/devLogin
-        setShowAuthModal(false);
-        // AuthContext's login/signup/devLogin methods should have set the token and user in AuthContext.
-        // App.jsx uses the `user` and `token` from `useAuth()`.
-        // The main task here is to ensure the session ID from authData is set globally.
+    // Callback for AuthModal upon successful login/signup (or dev login)
+    const handleAuthSuccess = (authData) => {
+        console.log("App.jsx: handleAuthSuccess called with data:", authData);
+        setShowAuthModal(false); // Close the modal
+        // AuthContext should have already set the token and user.
+        // App.jsx primarily needs to ensure the session ID is handled.
         if (authData && authData.sessionId) {
             setGlobalSessionId(authData.sessionId);
-            // fetchChatHistory will be triggered by the useEffect watching currentSessionId & token
-        } else if (token) { 
-            // Fallback: if authData didn't give a sessionId but we are now logged in (token exists)
-            console.warn("Auth success but no sessionId in authData, starting new session.");
-            api.startNewSession().then(data => {
-                setGlobalSessionId(data.sessionId);
-            }).catch(err => toast.error("Failed to initialize session."));
+        } else if (token && !currentSessionId) { // Fallback: if logged in but no session came from authData
+            api.startNewSession().then(data => setGlobalSessionId(data.sessionId));
         }
-        // If authData contains more complete user details than what parseToken in AuthContext provides:
+        // If authData (from backend login/signup) has more complete user info than what jwtDecode provided
         if(authData && authData.username && authData._id){
-            setAuthUser({username: authData.username, id: authData._id}); // Update user in AuthContext
+            setAuthUser({username: authData.username, id: authData._id}); 
         }
     };
     
+    // Handler for logout action
     const handleLogoutAndShowModal = () => {
-        logout(); // Clears token and user in AuthContext
-        setGlobalSessionId(null); // Clears session in AppStateContext
-        localStorage.removeItem('aiTutorSessionId'); // Explicitly clear from localStorage
+        logout(); // From AuthContext - clears token, user in context and localStorage
+        setGlobalSessionId(null); // Clear session in AppStateContext
+        localStorage.removeItem('aiTutorSessionId'); // Also clear from localStorage directly
         setMessages([]);
         setChatStatus("Logged out. Please login.");
-        if (!DEV_MODE_BYPASS_AUTH) { // Only force modal if not in full bypass
-             setShowAuthModal(true); 
-        } else {
-            // To test the modal even in dev mode after a "dev logout", you could manually set showAuthModal.
-            // However, the primary way to see AuthModal in dev mode is to set DEV_MODE_BYPASS_AUTH = false in relevant contexts.
-            console.log("DEV_MODE: Logged out. To see AuthModal, set DEV_MODE_BYPASS_AUTH=false and refresh, or handle dev logout differently.");
-            // For testing purposes, if you want a "dev logout" to always show the modal:
-            // setShowAuthModal(true); 
-        }
+        setShowAuthModal(true); // Show AuthModal after logout
         toast.success("Logged out successfully.");
     };
 
+    // Handler for "New Chat" button
     const handleNewChat = async () => {
         try {
-            const data = await api.startNewSession();
-            setGlobalSessionId(data.sessionId); // This will trigger useEffect to fetch history (which will be empty)
-            setMessages([]); // Explicitly clear messages for immediate UI update
-            setChatStatus("New chat started. Send a message!");
-            toast.success("New chat started!");
+            const data = await api.startNewSession(); // Mocked API call
+            setGlobalSessionId(data.sessionId);
+            setMessages([]); 
+            setChatStatus("New chat started (mock).");
+            toast.success("New mock chat started!");
         } catch (error) {
-            toast.error("Failed to start new chat.");
-            console.error("Failed to start new chat:", error);
+            toast.error("Failed to start new mock chat.");
         }
     };
 
-    // Initial App Loader (Handles both AuthContext loading and DEV_MODE_BYPASS_AUTH logic)
-    if (appInitializing) { 
+    // Handler for when a session is selected from ChatHistoryModal
+    const handleSelectSessionFromHistory = (sessionId) => {
+        if (sessionId && sessionId !== currentSessionId) {
+            setGlobalSessionId(sessionId); 
+            // fetchChatHistory will be called by its useEffect
+            toast.success(`Loading mock session...`);
+        } else if (sessionId === currentSessionId) {
+            toast.info("This session is already loaded.");
+        }
+        setIsHistoryModalOpen(false); 
+    };
+
+    // Render initial loading spinner if app or auth context is still initializing
+    if (appInitializing || authLoadingFromContext) { 
         return (
             <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-primary mb-4"></div>
@@ -1105,9 +465,9 @@ function App() {
     }
 
     return (
-        <div className={`flex flex-col h-screen overflow-hidden font-sans ${theme}`}> {/* Theme class applied here */}
+        <div className={`flex flex-col h-screen overflow-hidden font-sans ${theme}`}>
             <AnimatePresence>
-                {showAuthModal && !token && ( // Show AuthModal if needed and not authenticated
+                {showAuthModal && !token && ( // Show AuthModal if flag is true AND user is not authenticated
                     <AuthModal 
                         isOpen={showAuthModal} 
                         onClose={handleAuthSuccess} 
@@ -1115,34 +475,40 @@ function App() {
                 )}
             </AnimatePresence>
 
-            {/* Main application UI rendered if authenticated (token and user exist) */}
+            {/* Render main application UI if user is authenticated (token and user exist) */}
             {(token && user) && (
                 <>
                     <TopNav
-                        user={user} // User from AuthContext
+                        user={user}
                         onLogout={handleLogoutAndShowModal}
                         onNewChat={handleNewChat}
-                        onHistoryClick={() => toast.info("History feature coming soon!")}
+                        onHistoryClick={() => setIsHistoryModalOpen(true)}
                         orchestratorStatus={orchestratorStatus}
-                        // Panel toggles are handled by TopNav itself using AppStateContext
                     />
-                    <div className="flex flex-1 overflow-hidden pt-16 bg-background-light dark:bg-background-dark"> {/* pt-16 for fixed TopNav */}
-                        <AnimatePresence>
-                        {isLeftPanelOpen && (
-                            <motion.aside 
-                                key="left-panel"
-                                initial={{ x: '-100%', opacity: 0 }}
-                                animate={{ x: '0%', opacity: 1 }}
-                                exit={{ x: '-100%', opacity: 0 }}
-                                transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.3 }}
-                                className="w-full md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-r border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
-                            >
-                                <LeftPanel />
-                            </motion.aside>
-                        )}
+                    <div className="flex flex-1 overflow-hidden pt-16 bg-background-light dark:bg-background-dark">
+                        {/* Left Panel Area */}
+                        <AnimatePresence mode="wait">
+                            {isLeftPanelOpen ? (
+                                <motion.aside 
+                                    key="left-panel-main"
+                                    initial={{ x: '-100%', opacity: 0 }}
+                                    animate={{ x: '0%', opacity: 1 }}
+                                    exit={{ x: '-100%', opacity: 0 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                                    className="w-full md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
+                                >
+                                    <LeftPanel /> 
+                                </motion.aside>
+                            ) : (
+                                <LeftCollapsedNav /> // Shows icons and open button
+                            )}
                         </AnimatePresence>
-
-                        <main className="flex-1 flex flex-col overflow-hidden p-1 sm:p-2 md:p-4">
+                        
+                        {/* Center Panel */}
+                        <main className={`flex-1 flex flex-col overflow-hidden p-1 sm:p-2 md:p-4 
+                                         transition-all duration-300 ease-in-out
+                                         ${isLeftPanelOpen ? 'lg:ml-0' : 'lg:ml-16 md:ml-14'} 
+                                         ${isRightPanelOpen ? 'lg:mr-0' : 'lg:mr-16 md:mr-14'}`}>
                            <CenterPanel 
                                 messages={messages} 
                                 setMessages={setMessages} 
@@ -1152,25 +518,35 @@ function App() {
                             />
                         </main>
 
-                        <AnimatePresence>
-                        {isRightPanelOpen && (
-                            <motion.aside 
-                                key="right-panel"
-                                initial={{ x: '100%', opacity: 0 }}
-                                animate={{ x: '0%', opacity: 1 }}
-                                exit={{ x: '100%', opacity: 0 }}
-                                transition={{ type: 'spring', stiffness: 260, damping: 30, duration: 0.3 }}
-                                className="hidden md:block md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
-                            >
-                                <RightPanel />
-                            </motion.aside>
-                        )}
+                        {/* Right Panel Area */}
+                        <AnimatePresence mode="wait">
+                            {isRightPanelOpen ? (
+                                <motion.aside 
+                                    key="right-panel-main"
+                                    initial={{ x: '100%', opacity: 0 }}
+                                    animate={{ x: '0%', opacity: 1 }}
+                                    exit={{ x: '100%', opacity: 0 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                                    className="hidden md:flex md:flex-col md:w-72 lg:w-80 xl:w-96 bg-surface-light dark:bg-surface-dark border-l border-border-light dark:border-border-dark overflow-y-auto p-3 sm:p-4 shadow-lg flex-shrink-0 custom-scrollbar"
+                                >
+                                    <RightPanel />
+                                </motion.aside>
+                            ) : (
+                                <RightCollapsedNav /> // Shows icons and open button
+                            )}
                         </AnimatePresence>
                     </div>
+                    
+                    {/* Chat History Modal */}
+                    <ChatHistoryModal
+                        isOpen={isHistoryModalOpen}
+                        onClose={() => setIsHistoryModalOpen(false)}
+                        onSelectSession={handleSelectSessionFromHistory}
+                    />
                 </>
             )}
             
-            {/* Fallback UI if not initializing, not authenticated, and AuthModal isn't shown (should be rare) */}
+            {/* Fallback UI if not initializing, not authenticated, and AuthModal isn't showing (should be rare) */}
             { !appInitializing && !token && !showAuthModal && (
                  <div className="fixed inset-0 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
                      <p className="text-xl">Please <button 

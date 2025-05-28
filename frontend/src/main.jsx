@@ -10,6 +10,7 @@
 // )
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { useAppState } from './contexts/AppStateContext.jsx'; // Correct named import
 import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import { AppStateProvider } from './contexts/AppStateContext.jsx'

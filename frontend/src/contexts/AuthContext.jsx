@@ -1,182 +1,92 @@
-// import React, { createContext, useState, useEffect, useCallback } from 'react';
-// import api from '../services/api';
-// import { jwtDecode } from 'jwt-decode'; // npm install jwt-decode
+// // frontend/src/contexts/AuthContext.jsx (Version 1 - Testing/Development with Bypassed Auth)
+// import React, { createContext, useState, useEffect } from 'react';
+// // No jwt-decode or real api needed for this fully bypassed version
 
 // export const AuthContext = createContext(null);
 
-// export const AuthProvider = ({ children }) => {
-//     const [token, setToken] = useState(localStorage.getItem('authToken'));
-//     const [user, setUser] = useState(null); // { id, username, llmProvider, apiKey }
-//     const [loading, setLoading] = useState(true); // Initial auth check
+// const BYPASS_AUTH_FOR_DEVELOPMENT = true; 
 
-//     const parseToken = useCallback((tok) => {
-//         if (!tok) return null;
-//         try {
-//             const decoded = jwtDecode(tok); // Ensure your JWT has these fields
-//             return { id: decoded.id, username: decoded.username }; // Add other fields if present
-//         } catch (e) {
-//             console.error("Failed to decode token:", e);
-//             localStorage.removeItem('authToken');
-//             return null;
-//         }
-//     }, []);
+// const MOCK_USER_VERSION_1 = {
+//     id: 'devUserV1-001',
+//     username: 'DevUI-User',
+// };
+// const MOCK_TOKEN_VERSION_1 = 'static-mock-dev-token-for-v1-ui-testing';
+
+// export const AuthProvider = ({ children }) => {
+//     const [token, setToken] = useState(null);
+//     const [user, setUser] = useState(null);
+//     const [loading, setLoading] = useState(true); 
 
 //     useEffect(() => {
-//         const storedToken = localStorage.getItem('authToken');
-//         if (storedToken) {
-//             const decodedUser = parseToken(storedToken);
-//             if (decodedUser) {
-//                 setUser(decodedUser);
-//                 setToken(storedToken);
-//                 api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`; // For axios global config
-//             } else {
-//                 // Invalid token found
-//                 localStorage.removeItem('authToken');
-//             }
+//         console.log("AuthContext (V1 Testing): Initializing...");
+//         if (BYPASS_AUTH_FOR_DEVELOPMENT) {
+//             setToken(MOCK_TOKEN_VERSION_1);
+//             setUser(MOCK_USER_VERSION_1);
+//             // Simulate token storage for other parts of app that might check localStorage
+//             localStorage.setItem('authToken', MOCK_TOKEN_VERSION_1); 
+//             console.log("AuthContext (V1 Testing): Auth BYPASSED. User set:", MOCK_USER_VERSION_1);
+//         } else {
+//             // This branch is for non-bypassed mode, not active in V1
+//             localStorage.removeItem('authToken');
+//             setToken(null);
+//             setUser(null);
 //         }
 //         setLoading(false);
-//     }, [parseToken]);
+//     }, []);
 
-//     const login = async (credentials) => {
-//         try {
-//             const data = await api.login(credentials); // API should return { token, userDetails, sessionId }
-//             localStorage.setItem('authToken', data.token);
-//             const decodedUser = parseToken(data.token);
-//             setUser(decodedUser);
-//             setToken(data.token);
-//             api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-//             return data; // Pass along sessionId, etc.
-//         } catch (error) {
-//             console.error("Login failed:", error);
-//             throw error;
-//         }
+//     const login = async () => {
+//         console.log("AuthContext (V1 Testing): MOCK login called. Auto-success.");
+//         setUser(MOCK_USER_VERSION_1);
+//         setToken(MOCK_TOKEN_VERSION_1);
+//         return { token: MOCK_TOKEN_VERSION_1, username: MOCK_USER_VERSION_1.username, _id: MOCK_USER_VERSION_1.id, sessionId: `dev-session-${Date.now()}` };
 //     };
     
-//     const signup = async (signupData) => { // signupData includes username, password, llmProvider, apiKey (optional)
-//         try {
-//             // The actual API key storage should be handled securely by the backend.
-//             // Frontend might only send it during initial signup or LLM config update.
-//             // The backend then encrypts and stores it, never sending it back.
-//             const data = await api.signup(signupData); // API handles user creation
-//              // After signup, typically auto-login or prompt to login
-//             // For now, let's assume signup returns token like login for immediate use
-//             if(data.token) {
-//                 localStorage.setItem('authToken', data.token);
-//                 const decodedUser = parseToken(data.token);
-//                 setUser(decodedUser);
-//                 setToken(data.token);
-//                 api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-//             }
-//             return data;
-//         } catch (error) {
-//             console.error("Signup failed:", error);
-//             throw error;
-//         }
+//     const signup = async () => {
+//         console.log("AuthContext (V1 Testing): MOCK signup called. Auto-success.");
+//         setUser(MOCK_USER_VERSION_1);
+//         setToken(MOCK_TOKEN_VERSION_1);
+//         return { token: MOCK_TOKEN_VERSION_1, username: MOCK_USER_VERSION_1.username, _id: MOCK_USER_VERSION_1.id, sessionId: `dev-session-signup-${Date.now()}` };
 //     };
 
 //     const logout = () => {
-//         localStorage.removeItem('authToken');
-//         setUser(null);
+//         console.log("AuthContext (V1 Testing): MOCK logout called.");
 //         setToken(null);
-//         delete api.defaults.headers.common['Authorization'];
-//     };
-
-//     return (
-//         <AuthContext.Provider value={{ token, user, loading, login, signup, logout, setUser, setToken }}>
-//             {children}
-//         </AuthContext.Provider>
-//     );
-// };
-
-// import React, { createContext, useState, useEffect, useCallback } from 'react';
-// // import api from '../services/api'; // We'll mock API calls for now
-// // import { jwtDecode } from 'jwt-decode';
-
-// export const AuthContext = createContext(null);
-
-// const DEV_MODE_BYPASS_AUTH = true; // <--- SET THIS TO true FOR BYPASS
-
-// export const AuthProvider = ({ children }) => {
-//     const [token, setToken] = useState(DEV_MODE_BYPASS_AUTH ? 'fake-dev-token' : localStorage.getItem('authToken'));
-//     const [user, setUser] = useState(
-//         DEV_MODE_BYPASS_AUTH 
-//         ? { id: 'devUser123', username: 'DevUser' } 
-//         : null
-//     );
-//     const [loading, setLoading] = useState(false); // Set to false if bypassing initial auth check
-
-//     // Original parseToken and useEffect for real auth can be kept but won't run if DEV_MODE_BYPASS_AUTH is true
-//     const parseToken = useCallback((tok) => { /* ... original code ... */ }, []);
-//     useEffect(() => {
-//         if (DEV_MODE_BYPASS_AUTH) {
-//             setLoading(false); // Already set user and token
-//             return;
-//         }
-//         // ... original useEffect logic for real auth ...
-//         setLoading(false); // Ensure loading is set to false after check
-//     }, [parseToken]);
-
-
-//     const login = async (credentials) => {
-//         if (DEV_MODE_BYPASS_AUTH) {
-//             console.log("DEV_MODE: Bypassing real login.", credentials);
-//             const fakeUserData = { id: 'devUser123', username: credentials.username || 'DevUser' };
-//             setUser(fakeUserData);
-//             setToken('fake-dev-token');
-//             return { token: 'fake-dev-token', userDetails: fakeUserData, sessionId: 'dev-session-123' };
-//         }
-//         // ... original login logic using api.login ...
+//         setUser(null);
+//         localStorage.removeItem('authToken');
+//         // In a real app, you'd redirect or App.jsx would show AuthModal
 //     };
     
-//     const signup = async (signupData) => {
-//          if (DEV_MODE_BYPASS_AUTH) {
-//             console.log("DEV_MODE: Bypassing real signup.", signupData);
-//             const fakeUserData = { id: 'devUserSignup123', username: signupData.username || 'NewDevUser' };
-//             setUser(fakeUserData);
-//             setToken('fake-dev-signup-token');
-//             // In dev mode, simulate setting the LLM from signup
-//             // This would normally be handled by AppStateContext or through API
-//             // const { switchLLM } = useAppState(); // Can't use hook here
-//             // if (signupData.llmProvider) { /* update global state somehow or ignore for now */ }
-//             return { token: 'fake-dev-signup-token', userDetails: fakeUserData, sessionId: 'dev-session-signup-123' };
-//         }
-//         // ... original signup logic using api.signup ...
-//     };
-
-//     const logout = () => {
-//         if (DEV_MODE_BYPASS_AUTH) {
-//             // To test the logout flow even in dev mode, you might want to clear the fake state
-//             // For now, let's keep it simple: to "logout" in dev, you'd set DEV_MODE_BYPASS_AUTH to false and refresh
-//             // or implement a dev-mode specific logout:
-//             // setUser(null);
-//             // setToken(null);
-//             // console.log("DEV_MODE: Simulated logout. Refresh or set DEV_MODE_BYPASS_AUTH=false to see AuthModal.");
-//             // Or, for a more realistic test of the logout flow:
-//             localStorage.removeItem('authToken'); // Still good to remove if it was set
-//             setUser(null);
-//             setToken(null);
-//             // No API call for logout in this simplified bypass
-//             return;
-//         }
-//         // ... original logout logic ...
-//     };
+//     const devLogin = () => login({}); // For testing, devLogin just calls mock login
 
 //     return (
-//         <AuthContext.Provider value={{ token, user, loading, login, signup, logout, setUser, setToken }}>
+//         <AuthContext.Provider value={{ 
+//             token, user, loading, login, signup, logout, devLogin, 
+//             setUser, setToken, 
+//             isTestingMode: BYPASS_AUTH_FOR_DEVELOPMENT // Expose flag
+//         }}>
 //             {children}
 //         </AuthContext.Provider>
 //     );
 // };
 
 
+
+
+
+
+
+
+// frontend/src/contexts/AuthContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import api from '../services/api'; // We'll still use the mock or real API
+import api from '../services/api.js'; 
 import { jwtDecode } from 'jwt-decode';
+import toast from 'react-hot-toast'; // IMPORTED
 
 export const AuthContext = createContext(null);
 
-export const DEV_MODE_ALLOW_DEV_LOGIN = true; // New flag: Allows a special "Dev Login" button
-// const DEV_MODE_BYPASS_AUTH = false; // We are no longer fully bypassing, so this might be false or removed
+export const DEV_MODE_ALLOW_DEV_LOGIN = true; 
+const MOCK_DEV_USERNAME = 'DevUser'; 
+const MOCK_DEV_PASSWORD = 'devpassword';   
 
 export const AuthProvider = ({ children }) => {
     const [token, setToken] = useState(localStorage.getItem('authToken'));
@@ -186,89 +96,100 @@ export const AuthProvider = ({ children }) => {
     const parseToken = useCallback((tok) => {
         if (!tok) return null;
         try {
-            const decoded = jwtDecode(tok);
-            return { id: decoded.id, username: decoded.username };
+            const decoded = jwtDecode(tok); 
+            return { id: decoded.id || decoded.sub || 'mock-user-id', username: decoded.username || 'MockedUser' };
         } catch (e) {
-            console.error("Failed to decode token:", e);
-            localStorage.removeItem('authToken');
+            // console.warn("AuthContext: Failed to decode token (likely a simple mock token):", e.message);
+            if (tok && (tok.startsWith('mock-token-') || tok.startsWith('fake-dev-token-'))) { 
+                 const usernameFromMockToken = tok.split('-')[2] || MOCK_DEV_USERNAME;
+                 return {id: `mock-id-${usernameFromMockToken}`, username: usernameFromMockToken};
+            }
+            localStorage.removeItem('authToken'); 
             return null;
         }
     }, []);
 
     useEffect(() => {
+        setLoading(true);
         const storedToken = localStorage.getItem('authToken');
         if (storedToken) {
             const decodedUser = parseToken(storedToken);
             if (decodedUser) {
                 setUser(decodedUser);
                 setToken(storedToken);
-                // If using axios global config for token:
-                // apiClient.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+            } else {
+                setToken(null); setUser(null);
             }
+        } else {
+            setToken(null); setUser(null);
         }
         setLoading(false);
     }, [parseToken]);
 
     const login = async (credentials) => {
-        // Real login logic (or mock if api.js is in mock mode)
-        try {
-            const data = await api.login(credentials); 
+        const data = await api.login(credentials); 
+        localStorage.setItem('authToken', data.token);
+        const decodedUser = parseToken(data.token);
+        setUser(decodedUser);
+        setToken(data.token);
+        return data; 
+    };
+    
+    const signup = async (signupData) => {
+        const data = await api.signup(signupData); 
+        if (data.token) { 
             localStorage.setItem('authToken', data.token);
             const decodedUser = parseToken(data.token);
             setUser(decodedUser);
             setToken(data.token);
-            // if (apiClient) apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-            return data; 
-        } catch (error) {
-            console.error("Login failed:", error);
-            throw error;
         }
-    };
-    
-    const signup = async (signupData) => {
-        // Real signup logic (or mock)
-        try {
-            const data = await api.signup(signupData);
-            if(data.token) { // Assuming signup also returns a token for auto-login
-                localStorage.setItem('authToken', data.token);
-                const decodedUser = parseToken(data.token);
-                setUser(decodedUser);
-                setToken(data.token);
-                // if (apiClient) apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-            }
-            return data;
-        } catch (error) {
-            console.error("Signup failed:", error);
-            throw error;
-        }
+        return data;
     };
 
     const logout = () => {
         localStorage.removeItem('authToken');
         setUser(null);
         setToken(null);
-        // if (apiClient) delete apiClient.defaults.headers.common['Authorization'];
-        // Also clear session from AppStateContext if needed, usually done in App.jsx's logout handler
+        toast.success("Logged out.");
     };
 
-    // Special function for Dev Login button
-    const devLogin = () => {
+    const devLogin = async () => { // Ensure it's async
         if (DEV_MODE_ALLOW_DEV_LOGIN) {
-            const devToken = 'fake-dev-token-for-button';
-            const devUser = { id: 'devUserFromButton', username: 'DevButtonUser' };
-            localStorage.setItem('authToken', devToken);
-            setUser(devUser);
-            setToken(devToken);
-            // if (apiClient) apiClient.defaults.headers.common['Authorization'] = `Bearer ${devToken}`;
-            console.log("DEV_MODE: Logged in as DevButtonUser");
-            return { token: devToken, username: devUser.username, _id: devUser.id, sessionId: 'dev-session-from-button' };
+            console.log("AuthContext: devLogin initiated.");
+            try {
+                // This calls the mocked api.login from services/api.js
+                const data = await api.login({ username: MOCK_DEV_USERNAME, password: MOCK_DEV_PASSWORD });
+                if (data && data.token) { // Check if data and token are returned
+                    localStorage.setItem('authToken', data.token);
+                    const decodedUser = parseToken(data.token);
+                    setUser(decodedUser);
+                    setToken(data.token);
+                    console.log("AuthContext: Dev Quick Login successful. User:", decodedUser);
+                    return data; // Crucially, return the data object
+                } else {
+                    console.error("AuthContext: Mock api.login for devLogin did not return expected data (token).");
+                    throw new Error("Mock API login failed to provide token.");
+                }
+            } catch (error) {
+                console.error("AuthContext: Dev Quick Login via mock api.login failed:", error);
+                toast.error(`Dev Login Error: ${error.message}`); // More specific error
+                // Do not rethrow here if AuthModal will handle based on null return
+                return null; // Indicate failure
+            }
         }
-        return null;
+        console.warn("devLogin called but DEV_MODE_ALLOW_DEV_LOGIN is false.");
+        return null; // Return null if not allowed or if it fails
     };
-
 
     return (
-        <AuthContext.Provider value={{ token, user, loading, login, signup, logout, devLogin, setUser, setToken, DEV_MODE_ALLOW_DEV_LOGIN }}>
+        <AuthContext.Provider value={{ 
+            token, user, loading, 
+            login, signup, logout, 
+            devLogin: DEV_MODE_ALLOW_DEV_LOGIN ? devLogin : undefined, 
+            setUser, setToken, 
+            DEV_MODE_ALLOW_DEV_LOGIN,
+            MOCK_DEV_USERNAME, MOCK_DEV_PASSWORD
+        }}>
             {children}
         </AuthContext.Provider>
     );
