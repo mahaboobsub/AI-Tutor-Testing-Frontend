@@ -23,14 +23,27 @@ const Modal = ({
         };
     }, [isOpen, onClose]);
 
-    const sizeClasses = {
+    // const sizeClasses = {
+    //     sm: 'max-w-sm',
+    //     md: 'max-w-md',
+    //     lg: 'max-w-lg',
+    //     xl: 'max-w-xl',
+    //     '2xl': 'max-w-2xl'
+    // };
+     const sizeClasses = {
         sm: 'max-w-sm',
         md: 'max-w-md',
         lg: 'max-w-lg',
         xl: 'max-w-xl',
-        '2xl': 'max-w-2xl'
+        '2xl': 'max-w-2xl',
+        '3xl': 'max-w-3xl', // Added
+        '4xl': 'max-w-4xl', // Added
+        '5xl': 'max-w-5xl', // Added for even larger
+        // For more "full screen" feel, you might use percentage widths
+        // or fixed large pixel values if Tailwind is configured for them.
+        // 'almost-full': 'w-[90vw] max-w-[1600px]' // Example for custom class
     };
-
+    
     const backdropVariants = {
         visible: { opacity: 1 },
         hidden: { opacity: 0 },

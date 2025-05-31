@@ -1,81 +1,3 @@
-// // frontend/src/contexts/AuthContext.jsx (Version 1 - Testing/Development with Bypassed Auth)
-// import React, { createContext, useState, useEffect } from 'react';
-// // No jwt-decode or real api needed for this fully bypassed version
-
-// export const AuthContext = createContext(null);
-
-// const BYPASS_AUTH_FOR_DEVELOPMENT = true; 
-
-// const MOCK_USER_VERSION_1 = {
-//     id: 'devUserV1-001',
-//     username: 'DevUI-User',
-// };
-// const MOCK_TOKEN_VERSION_1 = 'static-mock-dev-token-for-v1-ui-testing';
-
-// export const AuthProvider = ({ children }) => {
-//     const [token, setToken] = useState(null);
-//     const [user, setUser] = useState(null);
-//     const [loading, setLoading] = useState(true); 
-
-//     useEffect(() => {
-//         console.log("AuthContext (V1 Testing): Initializing...");
-//         if (BYPASS_AUTH_FOR_DEVELOPMENT) {
-//             setToken(MOCK_TOKEN_VERSION_1);
-//             setUser(MOCK_USER_VERSION_1);
-//             // Simulate token storage for other parts of app that might check localStorage
-//             localStorage.setItem('authToken', MOCK_TOKEN_VERSION_1); 
-//             console.log("AuthContext (V1 Testing): Auth BYPASSED. User set:", MOCK_USER_VERSION_1);
-//         } else {
-//             // This branch is for non-bypassed mode, not active in V1
-//             localStorage.removeItem('authToken');
-//             setToken(null);
-//             setUser(null);
-//         }
-//         setLoading(false);
-//     }, []);
-
-//     const login = async () => {
-//         console.log("AuthContext (V1 Testing): MOCK login called. Auto-success.");
-//         setUser(MOCK_USER_VERSION_1);
-//         setToken(MOCK_TOKEN_VERSION_1);
-//         return { token: MOCK_TOKEN_VERSION_1, username: MOCK_USER_VERSION_1.username, _id: MOCK_USER_VERSION_1.id, sessionId: `dev-session-${Date.now()}` };
-//     };
-    
-//     const signup = async () => {
-//         console.log("AuthContext (V1 Testing): MOCK signup called. Auto-success.");
-//         setUser(MOCK_USER_VERSION_1);
-//         setToken(MOCK_TOKEN_VERSION_1);
-//         return { token: MOCK_TOKEN_VERSION_1, username: MOCK_USER_VERSION_1.username, _id: MOCK_USER_VERSION_1.id, sessionId: `dev-session-signup-${Date.now()}` };
-//     };
-
-//     const logout = () => {
-//         console.log("AuthContext (V1 Testing): MOCK logout called.");
-//         setToken(null);
-//         setUser(null);
-//         localStorage.removeItem('authToken');
-//         // In a real app, you'd redirect or App.jsx would show AuthModal
-//     };
-    
-//     const devLogin = () => login({}); // For testing, devLogin just calls mock login
-
-//     return (
-//         <AuthContext.Provider value={{ 
-//             token, user, loading, login, signup, logout, devLogin, 
-//             setUser, setToken, 
-//             isTestingMode: BYPASS_AUTH_FOR_DEVELOPMENT // Expose flag
-//         }}>
-//             {children}
-//         </AuthContext.Provider>
-//     );
-// };
-
-
-
-
-
-
-
-
 // frontend/src/contexts/AuthContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api.js'; 
@@ -194,3 +116,8 @@ export const AuthProvider = ({ children }) => {
         </AuthContext.Provider>
     );
 };
+
+
+
+
+
